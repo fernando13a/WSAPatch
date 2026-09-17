@@ -2,6 +2,7 @@ package com.ironmind.app.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.usecase.GetProgressionSuggestionUseCase
@@ -22,7 +23,20 @@ import kotlin.time.Duration.Companion.days
 class DashboardViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val getProgressionSuggestion: GetProgressionSuggestionUseCase,
+    private val llmInferenceService: LlmInferenceService,
 ) : ViewModel() {
+
+    private val _modelAvailable = MutableStateFlow(false)
+    val modelAvailable: StateFlow<Boolean> = _modelAvailable.asStateFlow()
+
+    /** Re-checks whether the on-device model is present (call on resume / after downloading). */
+    fun refreshModelAvailability() {
+        viewModelScope.launch { _modelAvailable.value = llmInferenceService.isModelAvailable() }
+    }
+
+    init {
+        refreshModelAvailability()
+    }
 
     val uiState: StateFlow<DashboardUiState> = combine(
         repository.observeExercises(),

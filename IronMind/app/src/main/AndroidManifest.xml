@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Used only to download the on-device AI model once; inference runs fully offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".IronMindApplication"
         android:allowBackup="true"

@@ -28,6 +28,7 @@ interface WorkoutRepository {
     fun observeRoutines(): Flow<List<Routine>>
     fun observeRoutinePlans(): Flow<List<RoutinePlan>>
     fun observeRoutinePlan(routineId: Long): Flow<RoutinePlan?>
+    suspend fun getRoutine(id: Long): Routine?
     suspend fun upsertRoutine(routine: Routine): Long
     suspend fun deleteRoutine(routine: Routine)
 

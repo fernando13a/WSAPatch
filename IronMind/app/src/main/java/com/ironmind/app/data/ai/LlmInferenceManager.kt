@@ -90,6 +90,5 @@ class LlmInferenceManager @Inject constructor(
         return LlmInference.createFromOptions(context, options)
     }
 
-    private fun resolveModelFile(): File =
-        File(File(context.filesDir, AiConstants.MODEL_SUBDIR), AiConstants.MODEL_FILE_NAME)
+    private fun resolveModelFile(): File = AiConstants.modelFile(context)
 }

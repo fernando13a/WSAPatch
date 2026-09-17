@@ -43,6 +43,9 @@ interface WorkoutDao {
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun countExercises(): Int
 
+    @Query("SELECT * FROM exercises")
+    suspend fun getAllExercisesOnce(): List<ExerciseEntity>
+
     @Upsert
     suspend fun upsertExercise(exercise: ExerciseEntity): Long
 

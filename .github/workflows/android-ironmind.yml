@@ -33,6 +33,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Skip the obsolete legacy "tools" package (removed by Google; its install fails on
+          # current runners). AGP downloads the platform/build-tools it needs on demand.
+          packages: ""
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew

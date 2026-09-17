@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,10 +49,16 @@ private val ErrorRed = Color(0xFFFF6B6B)
 fun DashboardScreen(
     onStartSession: (routineId: Long) -> Unit,
     onOpenProgress: (exerciseId: Long) -> Unit,
+    onNewRoutine: () -> Unit,
+    onEditRoutine: (routineId: Long) -> Unit,
+    onDownloadModel: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val suggestion by viewModel.suggestion.collectAsStateWithLifecycle()
+    val modelAvailable by viewModel.modelAvailable.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { viewModel.refreshModelAvailability() }
 
     Scaffold(
         containerColor = Black,
@@ -74,16 +81,27 @@ fun DashboardScreen(
 
             item {
                 AiSuggestionPanel(
+                    modelAvailable = modelAvailable,
                     focusExerciseId = state.focusExerciseId,
                     focusExerciseName = state.focusExerciseName,
                     suggestion = suggestion,
                     onGenerate = viewModel::generateSuggestion,
                     onDismiss = viewModel::dismissSuggestion,
                     onOpenProgress = onOpenProgress,
+                    onDownloadModel = onDownloadModel,
                 )
             }
 
-            item { SectionTitle("Rutinas") }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionTitle("Rutinas")
+                    TextButton(onClick = onNewRoutine) { Text("+ Nueva", color = Cyan) }
+                }
+            }
 
             if (state.routines.isEmpty()) {
                 item {
@@ -97,7 +115,11 @@ fun DashboardScreen(
             }
 
             items(state.routines, key = { it.routineId }) { routine ->
-                RoutineCard(routine = routine, onStart = { onStartSession(routine.routineId) })
+                RoutineCard(
+                    routine = routine,
+                    onStart = { onStartSession(routine.routineId) },
+                    onEdit = { onEditRoutine(routine.routineId) },
+                )
             }
 
             item {
@@ -126,12 +148,14 @@ private fun StatsRow(streak: Int, totalSessions: Int) {
 
 @Composable
 private fun AiSuggestionPanel(
+    modelAvailable: Boolean,
     focusExerciseId: Long?,
     focusExerciseName: String?,
     suggestion: SuggestionState?,
     onGenerate: (Long) -> Unit,
     onDismiss: () -> Unit,
     onOpenProgress: (Long) -> Unit,
+    onDownloadModel: () -> Unit,
 ) {
     GlassCard(
         borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
@@ -140,6 +164,16 @@ private fun AiSuggestionPanel(
     ) {
         SectionTitle("Coach IA", accent = Cyan)
         Spacer(Modifier.height(12.dp))
+
+        if (!modelAvailable) {
+            Text(
+                "El modelo de IA no está en el dispositivo. Descárgalo una vez para activar el coach (luego funciona offline).",
+                color = TextMuted,
+            )
+            Spacer(Modifier.height(12.dp))
+            AccentButton(text = "Descargar modelo", onClick = onDownloadModel)
+            return@GlassCard
+        }
 
         if (focusExerciseId == null) {
             Text(
@@ -187,7 +221,7 @@ private fun AiSuggestionPanel(
 }
 
 @Composable
-private fun RoutineCard(routine: RoutineProgressUi, onStart: () -> Unit) {
+private fun RoutineCard(routine: RoutineProgressUi, onStart: () -> Unit, onEdit: () -> Unit) {
     GlassCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -208,7 +242,10 @@ private fun RoutineCard(routine: RoutineProgressUi, onStart: () -> Unit) {
             style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
         )
         Spacer(Modifier.height(12.dp))
-        AccentButton(text = "Iniciar", onClick = onStart)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            AccentButton(text = "Iniciar", onClick = onStart)
+            TextButton(onClick = onEdit) { Text("Editar", color = Cyan) }
+        }
     }
 }
 

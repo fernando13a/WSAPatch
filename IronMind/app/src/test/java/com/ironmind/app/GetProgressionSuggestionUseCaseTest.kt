@@ -113,6 +113,7 @@ private class FakeWorkoutRepository(
     override fun observeRoutines(): Flow<List<Routine>> = emptyFlow()
     override fun observeRoutinePlans(): Flow<List<RoutinePlan>> = emptyFlow()
     override fun observeRoutinePlan(routineId: Long): Flow<RoutinePlan?> = emptyFlow()
+    override suspend fun getRoutine(id: Long): Routine? = null
     override suspend fun upsertRoutine(routine: Routine): Long = 0
     override suspend fun deleteRoutine(routine: Routine) = Unit
     override suspend fun addExerciseToRoutine(

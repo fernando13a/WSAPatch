@@ -8,7 +8,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ironmind.app.ui.dashboard.DashboardScreen
+import com.ironmind.app.ui.model.ModelDownloadScreen
 import com.ironmind.app.ui.progress.ProgressScreen
+import com.ironmind.app.ui.routineedit.RoutineEditScreen
 import com.ironmind.app.ui.session.SessionScreen
 
 /** Root navigation graph: Dashboard → Session / Progress. */
@@ -24,6 +26,11 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                 onOpenProgress = { exerciseId ->
                     navController.navigate(Destinations.progress(exerciseId))
                 },
+                onNewRoutine = { navController.navigate(Destinations.routineEdit()) },
+                onEditRoutine = { routineId ->
+                    navController.navigate(Destinations.routineEdit(routineId))
+                },
+                onDownloadModel = { navController.navigate(Destinations.MODEL_ROUTE) },
             )
         }
 
@@ -44,6 +51,19 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
             ),
         ) {
             ProgressScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Destinations.ROUTINE_EDIT_ROUTE,
+            arguments = listOf(
+                navArgument(Destinations.ARG_ROUTINE_ID) { type = NavType.LongType; defaultValue = 0L },
+            ),
+        ) {
+            RoutineEditScreen(onDone = { navController.popBackStack() })
+        }
+
+        composable(Destinations.MODEL_ROUTE) {
+            ModelDownloadScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -59,6 +59,10 @@ class WorkoutRepositoryImpl @Inject constructor(
     override fun observeRoutinePlan(routineId: Long): Flow<RoutinePlan?> =
         dao.observeRoutineWithExercises(routineId).map { it?.toDomain() }
 
+    override suspend fun getRoutine(id: Long): Routine? = withContext(dispatchers.io) {
+        dao.getRoutineById(id)?.toDomain()
+    }
+
     override suspend fun upsertRoutine(routine: Routine): Long = withContext(dispatchers.io) {
         dao.upsertRoutine(routine.toEntity())
     }
