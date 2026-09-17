@@ -1,4 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">IronMind</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Volver</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_create">Crear</string>
+
+    <!-- Dashboard -->
+    <string name="dash_streak_label">Racha (días)</string>
+    <string name="dash_streak_value">🔥 %1$d</string>
+    <string name="dash_sessions_label">Sesiones</string>
+    <string name="ai_coach_title">Coach IA</string>
+    <string name="ai_model_missing">El modelo de IA no está en el dispositivo. Descárgalo una vez para activar el coach (luego funciona offline).</string>
+    <string name="ai_download_model">Descargar modelo</string>
+    <string name="ai_need_history">Registra un entrenamiento para recibir sugerencias de sobrecarga progresiva generadas en tu dispositivo.</string>
+    <string name="ai_focus">Enfoque: %1$s</string>
+    <string name="ai_focus_fallback">tu último ejercicio</string>
+    <string name="ai_generate">Generar sugerencia</string>
+    <string name="ai_analyzing">Analizando tu progreso…</string>
+    <string name="ai_regenerate">Regenerar</string>
+    <string name="ai_view_progress">Ver progreso de este ejercicio</string>
+    <string name="routines_title">Rutinas</string>
+    <string name="routines_new">+ Nueva</string>
+    <string name="routines_empty">Aún no tienes rutinas. Empieza una sesión libre y registra tus ejercicios.</string>
+    <string name="routine_exercise_count">%1$d ejercicios</string>
+    <string name="routine_week_progress">%1$d%% entrenado esta semana</string>
+    <string name="routine_start">Iniciar</string>
+    <string name="start_free_session">Iniciar sesión libre</string>
+
+    <!-- Session -->
+    <string name="session_free_title">Sesión libre</string>
+    <string name="session_time">Tiempo</string>
+    <string name="session_total_volume">Volumen total</string>
+    <string name="session_sets_logged">Sets registrados</string>
+    <string name="session_finish">Finalizar</string>
+    <string name="session_exercises_title">Ejercicios</string>
+    <string name="rest_title">Descanso</string>
+    <string name="rest_stop">Detener</string>
+    <string name="rest_seconds">%1$ds</string>
+    <string name="add_set_title">Registrar set</string>
+    <string name="select_exercise">Selecciona ejercicio</string>
+    <string name="weight_kg">Peso (kg)</string>
+    <string name="reps">Reps</string>
+    <string name="notes_hint">Notas (suplementos, energía…)</string>
+    <string name="notes_label">Notas</string>
+    <string name="no_sets_yet">Sin sets todavía.</string>
+    <string name="set_line">Set %1$d:  %2$d kg × %3$d</string>
+    <string name="edit_set_title">Editar set %1$d</string>
+    <string name="kg_value">%1$d kg</string>
+
+    <!-- Progress -->
+    <string name="progress_title">Progreso</string>
+    <string name="load_evolution">Evolución de carga</string>
+    <string name="no_chart_data">Aún no hay datos suficientes para graficar.</string>
+    <string name="point_label">%1$s · %2$d kg</string>
+    <string name="best_mark">Mejor marca</string>
+    <string name="history_title">Historial</string>
+    <string name="no_records">Sin registros todavía.</string>
+    <string name="set_summary">%1$d kg × %2$d</string>
+    <string name="rpe_suffix">  ·  RPE %1$s</string>
+
+    <!-- Routine editor -->
+    <string name="routine_new_title">Nueva rutina</string>
+    <string name="routine_edit_title">Editar rutina</string>
+    <string name="routine_name_label">Nombre de la rutina</string>
+    <string name="split_label">División</string>
+    <string name="routine_exercises_title">Ejercicios de la rutina</string>
+    <string name="add_from_catalog_hint">Añade ejercicios desde el catálogo.</string>
+    <string name="numbered_exercise">%1$d. %2$s</string>
+    <string name="add_exercise_title">Añadir ejercicio</string>
+    <string name="no_more_catalog">No hay más ejercicios en el catálogo.</string>
+    <string name="select_from_catalog">Seleccionar del catálogo</string>
+    <string name="create_new_exercise">+ Crear ejercicio nuevo</string>
+    <string name="save_routine">Guardar rutina</string>
+    <string name="new_exercise_title">Nuevo ejercicio</string>
+    <string name="name_label">Nombre</string>
+    <string name="muscle_group_label">Grupo muscular</string>
+    <string name="equipment_label">Equipo</string>
+
+    <!-- Model download -->
+    <string name="model_title">Modelo de IA</string>
+    <string name="model_ondevice_title">IA on-device</string>
+    <string name="model_desc">El coach de IA corre 100% en tu dispositivo. Descarga una vez un modelo compatible con MediaPipe (p. ej. Gemma). Después funciona sin conexión.</string>
+    <string name="model_url_label">URL del modelo (.bin / .task)</string>
+    <string name="model_downloading_pct">Descargando… %1$d%%</string>
+    <string name="model_downloading">Descargando…</string>
+    <string name="model_ready">Modelo listo ✓</string>
+    <string name="model_error">Error: %1$s</string>
 </resources>

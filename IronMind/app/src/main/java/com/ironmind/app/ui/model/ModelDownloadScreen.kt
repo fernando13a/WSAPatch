@@ -25,10 +25,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.R
 import com.ironmind.app.domain.model.ModelDownloadState
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
@@ -52,10 +54,10 @@ fun ModelDownloadScreen(
         containerColor = Black,
         topBar = {
             TopAppBar(
-                title = { Text("Modelo de IA", color = Gold, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.model_title), color = Gold, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Cyan)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Black),
@@ -70,20 +72,16 @@ fun ModelDownloadScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             GlassCard {
-                SectionTitle("IA on-device", accent = Cyan)
+                SectionTitle(stringResource(R.string.model_ondevice_title), accent = Cyan)
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "El coach de IA corre 100% en tu dispositivo. Descarga una vez un modelo " +
-                        "compatible con MediaPipe (p. ej. Gemma). Después funciona sin conexión.",
-                    color = TextMuted,
-                )
+                Text(stringResource(R.string.model_desc), color = TextMuted)
             }
 
             GlassCard {
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL del modelo (.bin / .task)") },
+                    label = { Text(stringResource(R.string.model_url_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -91,7 +89,7 @@ fun ModelDownloadScreen(
 
                 when (val s = state) {
                     ModelDownloadState.Idle -> AccentButton(
-                        text = "Descargar modelo",
+                        text = stringResource(R.string.ai_download_model),
                         enabled = url.isNotBlank(),
                         onClick = { viewModel.download(url) },
                         modifier = Modifier.fillMaxWidth(),
@@ -99,7 +97,8 @@ fun ModelDownloadScreen(
 
                     is ModelDownloadState.Downloading -> Column {
                         Text(
-                            s.progress?.let { "Descargando… ${(it * 100).toInt()}%" } ?: "Descargando…",
+                            s.progress?.let { stringResource(R.string.model_downloading_pct, (it * 100).toInt()) }
+                                ?: stringResource(R.string.model_downloading),
                             color = Cyan,
                         )
                         Spacer(Modifier.height(8.dp))
@@ -107,16 +106,16 @@ fun ModelDownloadScreen(
                     }
 
                     ModelDownloadState.Ready -> Column {
-                        Text("Modelo listo ✓", color = Cyan, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.model_ready), color = Cyan, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(8.dp))
-                        AccentButton(text = "Volver", onClick = onBack, modifier = Modifier.fillMaxWidth())
+                        AccentButton(text = stringResource(R.string.action_back), onClick = onBack, modifier = Modifier.fillMaxWidth())
                     }
 
                     is ModelDownloadState.Error -> Column {
-                        Text("Error: ${s.message}", color = Color(0xFFFF6B6B))
+                        Text(stringResource(R.string.model_error, s.message), color = Color(0xFFFF6B6B))
                         Spacer(Modifier.height(8.dp))
                         AccentButton(
-                            text = "Reintentar",
+                            text = stringResource(R.string.action_retry),
                             enabled = url.isNotBlank(),
                             onClick = { viewModel.download(url) },
                             modifier = Modifier.fillMaxWidth(),

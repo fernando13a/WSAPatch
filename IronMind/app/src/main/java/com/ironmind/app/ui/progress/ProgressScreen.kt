@@ -29,10 +29,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
@@ -58,10 +60,10 @@ fun ProgressScreen(
         containerColor = Black,
         topBar = {
             TopAppBar(
-                title = { Text(state.exerciseName.ifEmpty { "Progreso" }, color = Gold, fontWeight = FontWeight.Bold) },
+                title = { Text(state.exerciseName.ifEmpty { stringResource(R.string.progress_title) }, color = Gold, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Cyan)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Black),
@@ -78,15 +80,15 @@ fun ProgressScreen(
         ) {
             item {
                 GlassCard {
-                    SectionTitle("Evolución de carga", accent = Cyan)
+                    SectionTitle(stringResource(R.string.load_evolution), accent = Cyan)
                     Spacer(Modifier.height(8.dp))
 
                     if (state.points.isEmpty()) {
-                        Text("Aún no hay datos suficientes para graficar.", color = TextMuted)
+                        Text(stringResource(R.string.no_chart_data), color = TextMuted)
                     } else {
                         val shown = selectedIndex?.let { state.points.getOrNull(it) } ?: state.points.last()
                         Text(
-                            "${shown.label} · ${shown.value.toInt()} kg",
+                            stringResource(R.string.point_label, shown.label, shown.value.toInt()),
                             color = Cyan,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
@@ -101,16 +103,16 @@ fun ProgressScreen(
                                 .height(200.dp),
                         )
                         Spacer(Modifier.height(12.dp))
-                        LabeledValue("Mejor marca", "${state.bestWeight.toInt()} kg")
+                        LabeledValue(stringResource(R.string.best_mark), stringResource(R.string.kg_value, state.bestWeight.toInt()))
                     }
                 }
             }
 
-            item { SectionTitle("Historial") }
+            item { SectionTitle(stringResource(R.string.history_title)) }
 
             if (state.history.isEmpty()) {
                 item {
-                    GlassCard { Text("Sin registros todavía.", color = TextMuted) }
+                    GlassCard { Text(stringResource(R.string.no_records), color = TextMuted) }
                 }
             }
 
@@ -130,11 +132,11 @@ private fun HistoryRow(set: SetLog) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(formatDate(set.performedAt), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+            val summary = stringResource(R.string.set_summary, set.weightKg.toInt(), set.reps)
+            val rpe = set.rpe
+            val rpeText = if (rpe != null) stringResource(R.string.rpe_suffix, rpe.toString()) else ""
             Text(
-                buildString {
-                    append("${set.weightKg.toInt()} kg × ${set.reps}")
-                    set.rpe?.let { append("  ·  RPE ${it}") }
-                },
+                text = summary + rpeText,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
             )

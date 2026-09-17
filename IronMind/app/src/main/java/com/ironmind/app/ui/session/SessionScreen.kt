@@ -50,11 +50,13 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
@@ -103,15 +105,15 @@ fun SessionScreen(
         containerColor = Black,
         topBar = {
             TopAppBar(
-                title = { Text(state.title, color = Gold, fontWeight = FontWeight.Bold) },
+                title = { Text(state.title ?: stringResource(R.string.session_free_title), color = Gold, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Cyan)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)
                     }
                 },
                 actions = {
                     TextButton(onClick = { viewModel.finishSession(onBack) }) {
-                        Text("Finalizar", color = Cyan, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.session_finish), color = Cyan, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Black),
@@ -129,11 +131,11 @@ fun SessionScreen(
             item {
                 GlassCard {
                     val totalSets = state.exerciseBlocks.sumOf { it.sets.size }
-                    LabeledValue("Tiempo", formatMmSs(elapsedSeconds))
+                    LabeledValue(stringResource(R.string.session_time), formatMmSs(elapsedSeconds))
                     Spacer(Modifier.height(6.dp))
-                    LabeledValue("Volumen total", "${state.totalVolume.toInt()} kg")
+                    LabeledValue(stringResource(R.string.session_total_volume), stringResource(R.string.kg_value, state.totalVolume.toInt()))
                     Spacer(Modifier.height(6.dp))
-                    LabeledValue("Sets registrados", "$totalSets")
+                    LabeledValue(stringResource(R.string.session_sets_logged), "$totalSets")
                 }
             }
 
@@ -148,7 +150,7 @@ fun SessionScreen(
                 )
             }
 
-            item { SectionTitle("Ejercicios") }
+            item { SectionTitle(stringResource(R.string.session_exercises_title)) }
 
             items(state.exerciseBlocks, key = { it.exerciseId }) { block ->
                 ExerciseBlockCard(
@@ -175,7 +177,7 @@ fun SessionScreen(
 @Composable
 private fun RestTimerCard(restRemaining: Int, onStart: (Int) -> Unit, onStop: () -> Unit) {
     GlassCard {
-        SectionTitle("Descanso", accent = Cyan)
+        SectionTitle(stringResource(R.string.rest_title), accent = Cyan)
         Spacer(Modifier.height(12.dp))
         Text(
             text = formatMmSs(restRemaining),
@@ -186,10 +188,12 @@ private fun RestTimerCard(restRemaining: Int, onStart: (Int) -> Unit, onStop: ()
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(60, 90, 120).forEach { seconds ->
-                OutlinedButton(onClick = { onStart(seconds) }) { Text("${seconds}s", color = Gold) }
+                OutlinedButton(onClick = { onStart(seconds) }) {
+                    Text(stringResource(R.string.rest_seconds, seconds), color = Gold)
+                }
             }
             if (restRemaining > 0) {
-                TextButton(onClick = onStop) { Text("Detener", color = TextMuted) }
+                TextButton(onClick = onStop) { Text(stringResource(R.string.rest_stop), color = TextMuted) }
             }
         }
     }
@@ -210,10 +214,10 @@ private fun AddSetCard(
     LaunchedEffect(exercises) {
         if (selectedId == 0L && exercises.isNotEmpty()) selectedId = exercises.first().first
     }
-    val selectedName = exercises.firstOrNull { it.first == selectedId }?.second ?: "Selecciona ejercicio"
+    val selectedName = exercises.firstOrNull { it.first == selectedId }?.second ?: stringResource(R.string.select_exercise)
 
     GlassCard {
-        SectionTitle("Registrar set", accent = Gold)
+        SectionTitle(stringResource(R.string.add_set_title), accent = Gold)
         Spacer(Modifier.height(12.dp))
 
         Box {
@@ -235,7 +239,7 @@ private fun AddSetCard(
             OutlinedTextField(
                 value = weight,
                 onValueChange = { weight = it },
-                label = { Text("Peso (kg)") },
+                label = { Text(stringResource(R.string.weight_kg)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
@@ -243,7 +247,7 @@ private fun AddSetCard(
             OutlinedTextField(
                 value = reps,
                 onValueChange = { reps = it },
-                label = { Text("Reps") },
+                label = { Text(stringResource(R.string.reps)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
@@ -254,7 +258,7 @@ private fun AddSetCard(
         OutlinedTextField(
             value = notes,
             onValueChange = { notes = it },
-            label = { Text("Notas (suplementos, energía…)") },
+            label = { Text(stringResource(R.string.notes_hint)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -263,7 +267,7 @@ private fun AddSetCard(
         val weightValue = weight.toDoubleOrNull()
         val repsValue = reps.toIntOrNull()
         AccentButton(
-            text = "Registrar set",
+            text = stringResource(R.string.add_set_title),
             enabled = selectedId != 0L && weightValue != null && repsValue != null,
             onClick = {
                 if (weightValue != null && repsValue != null) {
@@ -287,7 +291,7 @@ private fun ExerciseBlockCard(
         Text(block.exerciseName, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
         if (block.sets.isEmpty()) {
-            Text("Sin sets todavía.", color = TextMuted)
+            Text(stringResource(R.string.no_sets_yet), color = TextMuted)
         } else {
             block.sets.forEach { set ->
                 Row(
@@ -296,13 +300,13 @@ private fun ExerciseBlockCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Set ${set.setNumber}:  ${set.weightKg.toInt()} kg × ${set.reps}",
+                        stringResource(R.string.set_line, set.setNumber, set.weightKg.toInt(), set.reps),
                         color = Color.White,
                         modifier = Modifier
                             .weight(1f)
                             .clickable { onEditSet(set) },
                     )
-                    TextButton(onClick = { onEditSet(set) }) { Text("Editar", color = Cyan) }
+                    TextButton(onClick = { onEditSet(set) }) { Text(stringResource(R.string.action_edit), color = Cyan) }
                     TextButton(onClick = { onDeleteSet(set) }) { Text("✕", color = TextMuted) }
                 }
                 if (!set.notes.isNullOrBlank()) {
@@ -335,16 +339,16 @@ private fun EditSetDialog(
                         onSave(set.copy(weightKg = weightValue, reps = repsValue, notes = notes.takeIf { it.isNotBlank() }))
                     }
                 },
-            ) { Text("Guardar", color = Cyan) }
+            ) { Text(stringResource(R.string.action_save), color = Cyan) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } },
-        title = { Text("Editar set ${set.setNumber}", color = Gold) },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel), color = TextMuted) } },
+        title = { Text(stringResource(R.string.edit_set_title, set.setNumber), color = Gold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = weight,
                     onValueChange = { weight = it },
-                    label = { Text("Peso (kg)") },
+                    label = { Text(stringResource(R.string.weight_kg)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -352,7 +356,7 @@ private fun EditSetDialog(
                 OutlinedTextField(
                     value = reps,
                     onValueChange = { reps = it },
-                    label = { Text("Reps") },
+                    label = { Text(stringResource(R.string.reps)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -360,7 +364,7 @@ private fun EditSetDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notas") },
+                    label = { Text(stringResource(R.string.notes_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

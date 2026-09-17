@@ -13,7 +13,8 @@ data class ExerciseBlockUi(
 data class SessionUiState(
     val isLoading: Boolean = true,
     val sessionId: Long = 0,
-    val title: String = "Sesión",
+    /** Routine or session title; null means an untitled free session (UI supplies a localized label). */
+    val title: String? = null,
     val startedAt: Long = 0,
     val isFinished: Boolean = false,
     val totalVolume: Double = 0.0,

@@ -34,10 +34,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.R
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.MuscleGroup
@@ -65,19 +67,19 @@ fun RoutineEditScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (state.routineId == 0L) "Nueva rutina" else "Editar rutina",
+                        if (state.routineId == 0L) stringResource(R.string.routine_new_title) else stringResource(R.string.routine_edit_title),
                         color = Gold,
                         fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onDone) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Cyan)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)
                     }
                 },
                 actions = {
                     TextButton(enabled = state.canSave, onClick = { viewModel.save(onDone) }) {
-                        Text("Guardar", color = if (state.canSave) Cyan else TextMuted, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.action_save), color = if (state.canSave) Cyan else TextMuted, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Black),
@@ -96,12 +98,12 @@ fun RoutineEditScreen(
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::setName,
-                    label = { Text("Nombre de la rutina") },
+                    label = { Text(stringResource(R.string.routine_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("División", color = TextMuted, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.split_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
                 EnumDropdown(
                     current = state.split.name,
                     options = RoutineSplit.entries.map { it.name },
@@ -109,18 +111,18 @@ fun RoutineEditScreen(
                 )
             }
 
-            SectionTitle("Ejercicios de la rutina")
+            SectionTitle(stringResource(R.string.routine_exercises_title))
 
             GlassCard {
                 if (state.selected.isEmpty()) {
-                    Text("Añade ejercicios desde el catálogo.", color = TextMuted)
+                    Text(stringResource(R.string.add_from_catalog_hint), color = TextMuted)
                 } else {
                     state.selected.forEachIndexed { index, exercise ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("${index + 1}. ${exercise.name}", modifier = Modifier.weight(1f))
+                            Text(stringResource(R.string.numbered_exercise, index + 1, exercise.name), modifier = Modifier.weight(1f))
                             TextButton(onClick = { viewModel.move(index, index - 1) }) { Text("↑", color = Cyan) }
                             TextButton(onClick = { viewModel.move(index, index + 1) }) { Text("↓", color = Cyan) }
                             TextButton(onClick = { viewModel.removeExercise(exercise) }) { Text("✕", color = TextMuted) }
@@ -130,25 +132,25 @@ fun RoutineEditScreen(
             }
 
             GlassCard {
-                SectionTitle("Añadir ejercicio", accent = Cyan)
+                SectionTitle(stringResource(R.string.add_exercise_title), accent = Cyan)
                 Spacer(Modifier.height(12.dp))
                 if (state.addable.isEmpty()) {
-                    Text("No hay más ejercicios en el catálogo.", color = TextMuted)
+                    Text(stringResource(R.string.no_more_catalog), color = TextMuted)
                 } else {
                     EnumDropdown(
-                        current = "Seleccionar del catálogo",
+                        current = stringResource(R.string.select_from_catalog),
                         options = state.addable.map { it.name },
                         onSelect = { name -> state.addable.firstOrNull { it.name == name }?.let(viewModel::addExercise) },
                     )
                 }
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = { showNewExercise = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text("+ Crear ejercicio nuevo", color = Gold)
+                    Text(stringResource(R.string.create_new_exercise), color = Gold)
                 }
             }
 
             AccentButton(
-                text = "Guardar rutina",
+                text = stringResource(R.string.save_routine),
                 onClick = { viewModel.save(onDone) },
                 enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth(),
@@ -198,27 +200,27 @@ private fun NewExerciseDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(enabled = name.isNotBlank(), onClick = { onCreate(name, muscle, equipment) }) {
-                Text("Crear", color = if (name.isNotBlank()) Cyan else TextMuted)
+                Text(stringResource(R.string.action_create), color = if (name.isNotBlank()) Cyan else TextMuted)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } },
-        title = { Text("Nuevo ejercicio", color = Gold) },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel), color = TextMuted) } },
+        title = { Text(stringResource(R.string.new_exercise_title), color = Gold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nombre") },
+                    label = { Text(stringResource(R.string.name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Text("Grupo muscular", color = TextMuted, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.muscle_group_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
                 EnumDropdown(
                     current = muscle.name,
                     options = MuscleGroup.entries.map { it.name },
                     onSelect = { muscle = MuscleGroup.valueOf(it) },
                 )
-                Text("Equipo", color = TextMuted, style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.equipment_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
                 EnumDropdown(
                     current = equipment.name,
                     options = Equipment.entries.map { it.name },

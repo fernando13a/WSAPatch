@@ -81,7 +81,7 @@ class SessionViewModel @Inject constructor(
             // Render as soon as the catalog/plan are available, even before a session row exists.
             isLoading = false,
             sessionId = detail?.session?.id ?: 0,
-            title = plan?.routine?.name ?: detail?.session?.title ?: "Sesión libre",
+            title = plan?.routine?.name ?: detail?.session?.title,
             startedAt = detail?.session?.startedAt ?: 0,
             isFinished = detail?.session?.endedAt != null,
             totalVolume = detail?.totalVolume ?: 0.0,

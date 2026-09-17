@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,10 +27,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.R
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
@@ -40,7 +44,6 @@ import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
 import com.ironmind.app.ui.theme.TextMuted
-import androidx.compose.ui.graphics.Color
 
 private val ErrorRed = Color(0xFFFF6B6B)
 
@@ -64,7 +67,7 @@ fun DashboardScreen(
         containerColor = Black,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("IronMind", color = Gold, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.app_name), color = Gold, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Black),
             )
         },
@@ -98,18 +101,15 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionTitle("Rutinas")
-                    TextButton(onClick = onNewRoutine) { Text("+ Nueva", color = Cyan) }
+                    SectionTitle(stringResource(R.string.routines_title))
+                    TextButton(onClick = onNewRoutine) { Text(stringResource(R.string.routines_new), color = Cyan) }
                 }
             }
 
             if (state.routines.isEmpty()) {
                 item {
                     GlassCard {
-                        Text(
-                            "Aún no tienes rutinas. Empieza una sesión libre y registra tus ejercicios.",
-                            color = TextMuted,
-                        )
+                        Text(stringResource(R.string.routines_empty), color = TextMuted)
                     }
                 }
             }
@@ -124,7 +124,7 @@ fun DashboardScreen(
 
             item {
                 AccentButton(
-                    text = "Iniciar sesión libre",
+                    text = stringResource(R.string.start_free_session),
                     onClick = { onStartSession(0L) },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -140,8 +140,18 @@ private fun StatsRow(streak: Int, totalSessions: Int) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            StatTile(value = "🔥 $streak", label = "Racha (días)", modifier = Modifier.weight(1f), valueColor = Gold)
-            StatTile(value = "$totalSessions", label = "Sesiones", modifier = Modifier.weight(1f), valueColor = Cyan)
+            StatTile(
+                value = stringResource(R.string.dash_streak_value, streak),
+                label = stringResource(R.string.dash_streak_label),
+                modifier = Modifier.weight(1f),
+                valueColor = Gold,
+            )
+            StatTile(
+                value = "$totalSessions",
+                label = stringResource(R.string.dash_sessions_label),
+                modifier = Modifier.weight(1f),
+                valueColor = Cyan,
+            )
         }
     }
 }
@@ -162,60 +172,61 @@ private fun AiSuggestionPanel(
             listOf(Cyan.copy(alpha = 0.55f), Gold.copy(alpha = 0.35f)),
         ),
     ) {
-        SectionTitle("Coach IA", accent = Cyan)
+        SectionTitle(stringResource(R.string.ai_coach_title), accent = Cyan)
         Spacer(Modifier.height(12.dp))
 
         if (!modelAvailable) {
-            Text(
-                "El modelo de IA no está en el dispositivo. Descárgalo una vez para activar el coach (luego funciona offline).",
-                color = TextMuted,
-            )
+            Text(stringResource(R.string.ai_model_missing), color = TextMuted)
             Spacer(Modifier.height(12.dp))
-            AccentButton(text = "Descargar modelo", onClick = onDownloadModel)
+            AccentButton(text = stringResource(R.string.ai_download_model), onClick = onDownloadModel)
             return@GlassCard
         }
 
         if (focusExerciseId == null) {
-            Text(
-                "Registra un entrenamiento para recibir sugerencias de sobrecarga progresiva generadas en tu dispositivo.",
-                color = TextMuted,
-            )
+            Text(stringResource(R.string.ai_need_history), color = TextMuted)
             return@GlassCard
         }
 
-        Text("Enfoque: ${focusExerciseName ?: "tu último ejercicio"}", color = Gold, fontWeight = FontWeight.SemiBold)
+        val focusName = focusExerciseName ?: stringResource(R.string.ai_focus_fallback)
+        Text(stringResource(R.string.ai_focus, focusName), color = Gold, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(12.dp))
 
         when (val s = suggestion) {
             null -> AccentButton(
-                text = "Generar sugerencia",
+                text = stringResource(R.string.ai_generate),
                 onClick = { onGenerate(focusExerciseId) },
             )
 
             SuggestionState.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(color = Cyan, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
-                Spacer(Modifier.height(0.dp))
-                Text("  Analizando tu progreso…", color = TextMuted)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.ai_analyzing), color = TextMuted)
             }
 
             is SuggestionState.Success -> Column {
                 Text(s.suggestion, color = Color.White)
                 if (s.isComplete) {
                     Row {
-                        TextButton(onClick = { onGenerate(focusExerciseId) }) { Text("Regenerar", color = Cyan) }
-                        TextButton(onClick = onDismiss) { Text("Cerrar", color = TextMuted) }
+                        TextButton(onClick = { onGenerate(focusExerciseId) }) {
+                            Text(stringResource(R.string.ai_regenerate), color = Cyan)
+                        }
+                        TextButton(onClick = onDismiss) {
+                            Text(stringResource(R.string.action_close), color = TextMuted)
+                        }
                     }
                 }
             }
 
             is SuggestionState.Error -> Column {
                 Text(s.message, color = ErrorRed)
-                TextButton(onClick = { onGenerate(focusExerciseId) }) { Text("Reintentar", color = Cyan) }
+                TextButton(onClick = { onGenerate(focusExerciseId) }) {
+                    Text(stringResource(R.string.action_retry), color = Cyan)
+                }
             }
         }
 
         TextButton(onClick = { onOpenProgress(focusExerciseId) }) {
-            Text("Ver progreso de este ejercicio", color = Cyan)
+            Text(stringResource(R.string.ai_view_progress), color = Cyan)
         }
     }
 }
@@ -231,20 +242,20 @@ private fun RoutineCard(routine: RoutineProgressUi, onStart: () -> Unit, onEdit:
                 Text(routine.name, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 SplitChip(label = routine.split.name)
             }
-            Text("${routine.exerciseCount} ejercicios", color = TextMuted)
+            Text(stringResource(R.string.routine_exercise_count, routine.exerciseCount), color = TextMuted)
         }
         Spacer(Modifier.height(12.dp))
         GlowProgressBar(progress = routine.progress)
         Spacer(Modifier.height(4.dp))
         Text(
-            "${(routine.progress * 100).toInt()}% entrenado esta semana",
+            stringResource(R.string.routine_week_progress, (routine.progress * 100).toInt()),
             color = TextMuted,
             style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
         )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            AccentButton(text = "Iniciar", onClick = onStart)
-            TextButton(onClick = onEdit) { Text("Editar", color = Cyan) }
+            AccentButton(text = stringResource(R.string.routine_start), onClick = onStart)
+            TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit), color = Cyan) }
         }
     }
 }
