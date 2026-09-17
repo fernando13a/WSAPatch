@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Core surface -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Dynamic accents (design system) -->
+    <color name="gold">#FFFFD700</color>
+    <color name="cyan">#FF00FFFF</color>
+</resources>

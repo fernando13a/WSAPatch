@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The app is themed in Compose (see ui/theme). This platform theme only controls
+        the window chrome so the app opens straight into a pure-black surface with no
+        white flash on cold start.
+    -->
+    <style name="Theme.IronMind" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

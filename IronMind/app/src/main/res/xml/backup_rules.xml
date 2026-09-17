@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Controls legacy (Android 11 and lower) auto-backup. The Room database is included
+   so a user's training history survives a device restore.
+-->
+<full-backup-content>
+    <include domain="database" path="ironmind.db" />
+</full-backup-content>
