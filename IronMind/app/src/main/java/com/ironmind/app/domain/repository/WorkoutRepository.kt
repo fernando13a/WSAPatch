@@ -47,6 +47,7 @@ interface WorkoutRepository {
     fun observeSessions(): Flow<List<WorkoutSession>>
     fun observeSessionDetails(): Flow<List<SessionDetail>>
     fun observeSessionDetail(sessionId: Long): Flow<SessionDetail?>
+    suspend fun getSession(id: Long): WorkoutSession?
     suspend fun startSession(session: WorkoutSession): Long
     suspend fun updateSession(session: WorkoutSession)
     suspend fun deleteSession(session: WorkoutSession)

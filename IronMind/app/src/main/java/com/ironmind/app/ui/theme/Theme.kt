@@ -27,6 +27,7 @@ fun IronMindTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = IronMindColorScheme,
         typography = Typography,
+        shapes = IronMindShapes,
         content = content,
     )
 }

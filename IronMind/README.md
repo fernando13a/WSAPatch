@@ -30,8 +30,10 @@ accents in **gold `#FFD700`** and **cyan `#00FFFF`**. Tokens live in
 - **Stage 2 — On-device AI.** MediaPipe LLM Inference (`LlmInferenceManager`) streaming a
   `Flow<String>`, `GetProgressionSuggestionUseCase` (Room history → coach prompt → progressive
   overload suggestion), and a `SuggestionState` sealed class (Loading / Success / Error). ✅
-- **Stage 3 — UI.** Full glassmorphism screens, MVVM ViewModels, navigation, and the model
-  download/placement flow.
+- **Stage 3 — Premium UI (Jetpack Compose).** Theme (colors/typography/shapes), reusable
+  glassmorphism components, and three screens — Dashboard (streak, AI panel, routine progress),
+  Session tracking (real-time set logging + rest timer), Progress analysis (interactive cyan-on-gold
+  load chart + history) — wired to Room and the local-AI flow via Hilt MVVM ViewModels. ✅
 
 ## Project structure (Clean Architecture)
 
@@ -55,8 +57,26 @@ com.ironmind.app
 │   ├── mapper         # entity <-> domain mappers
 │   └── repository     # WorkoutRepositoryImpl
 ├── di                 # Hilt modules: Database, Repository, Coroutines, Ai
-└── ui/theme           # Compose design system (black + gold + cyan, glassmorphism)
+└── ui
+    ├── theme          # Compose design system (black + gold + cyan, glassmorphism)
+    ├── components     # GlassCard, GlowProgressBar, StatTile, AccentButton, …
+    ├── navigation     # NavHost + routes
+    ├── dashboard      # DashboardScreen + DashboardViewModel
+    ├── session        # SessionScreen + SessionViewModel (set logging + rest timer)
+    └── progress       # ProgressScreen + ProgressViewModel + LoadChart (Canvas)
 ```
+
+## Screens (Stage 3)
+
+- **Dashboard** — training streak, a live AI suggestion panel (on-device, streamed), and routine
+  cards with weekly-progress bars.
+- **Session tracking** — pick an exercise, log weight × reps in real time, auto-starting a
+  rest timer (60/90/120s presets); sets grouped per exercise.
+- **Progress analysis** — an interactive `LoadChart` (Canvas): a cyan curve with glow + area fill
+  over a gold field, tap-to-select a point, plus a best-mark stat and detailed history.
+
+All three are driven by Hilt `@HiltViewModel` ViewModels exposing `StateFlow<…UiState>` collected
+with `collectAsStateWithLifecycle()`, reactively backed by Room `Flow`s and the AI use case.
 
 ## On-device AI (Stage 2)
 

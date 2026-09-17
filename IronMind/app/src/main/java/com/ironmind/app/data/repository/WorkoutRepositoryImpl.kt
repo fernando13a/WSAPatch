@@ -102,6 +102,10 @@ class WorkoutRepositoryImpl @Inject constructor(
     override fun observeSessionDetail(sessionId: Long): Flow<SessionDetail?> =
         dao.observeSessionWithSets(sessionId).map { it?.toDomain() }
 
+    override suspend fun getSession(id: Long): WorkoutSession? = withContext(dispatchers.io) {
+        dao.getSessionById(id)?.toDomain()
+    }
+
     override suspend fun startSession(session: WorkoutSession): Long = withContext(dispatchers.io) {
         dao.insertSession(session.toEntity())
     }

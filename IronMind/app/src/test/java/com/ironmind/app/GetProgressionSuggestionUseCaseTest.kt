@@ -127,6 +127,7 @@ private class FakeWorkoutRepository(
     override fun observeSessions(): Flow<List<WorkoutSession>> = emptyFlow()
     override fun observeSessionDetails(): Flow<List<SessionDetail>> = emptyFlow()
     override fun observeSessionDetail(sessionId: Long): Flow<SessionDetail?> = emptyFlow()
+    override suspend fun getSession(id: Long): WorkoutSession? = null
     override suspend fun startSession(session: WorkoutSession): Long = 0
     override suspend fun updateSession(session: WorkoutSession) = Unit
     override suspend fun deleteSession(session: WorkoutSession) = Unit
