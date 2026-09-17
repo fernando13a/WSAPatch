@@ -54,6 +54,8 @@ interface WorkoutRepository {
     fun observeSetLogsForExercise(exerciseId: Long): Flow<List<SetLog>>
     /** The most recent logged set for an exercise — the "last time" reference for progression. */
     suspend fun getLastSetLogForExercise(exerciseId: Long): SetLog?
+    /** The most recent [limit] set logs for an exercise (newest first) — the AI history window. */
+    suspend fun getRecentSetLogs(exerciseId: Long, limit: Int): List<SetLog>
     suspend fun upsertSetLog(setLog: SetLog): Long
     suspend fun deleteSetLog(setLog: SetLog)
 }

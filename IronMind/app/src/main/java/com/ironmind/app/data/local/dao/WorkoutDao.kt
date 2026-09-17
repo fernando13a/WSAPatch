@@ -125,6 +125,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM set_logs WHERE exerciseId = :exerciseId ORDER BY performedAt DESC LIMIT 1")
     suspend fun getLastSetLogForExercise(exerciseId: Long): SetLogEntity?
 
+    @Query("SELECT * FROM set_logs WHERE exerciseId = :exerciseId ORDER BY performedAt DESC LIMIT :limit")
+    suspend fun getRecentSetLogsForExercise(exerciseId: Long, limit: Int): List<SetLogEntity>
+
     @Upsert
     suspend fun upsertSetLog(setLog: SetLogEntity): Long
 

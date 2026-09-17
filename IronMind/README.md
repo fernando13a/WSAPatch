@@ -25,19 +25,24 @@ accents in **gold `#FFD700`** and **cyan `#00FFFF`**. Tokens live in
 
 ## Roadmap
 
-- **Stage 1 — Data & persistence (this commit).** Package structure, Room entities, relations,
+- **Stage 1 — Data & persistence.** Package structure, Room entities, relations,
   DAO, DI wiring, seed catalog. ✅
-- **Stage 2 — Domain & presentation.** Use cases, MVVM ViewModels, state, navigation.
-- **Stage 3 — UI + on-device AI.** Full glassmorphism screens and the streaming MediaPipe LLM.
+- **Stage 2 — On-device AI.** MediaPipe LLM Inference (`LlmInferenceManager`) streaming a
+  `Flow<String>`, `GetProgressionSuggestionUseCase` (Room history → coach prompt → progressive
+  overload suggestion), and a `SuggestionState` sealed class (Loading / Success / Error). ✅
+- **Stage 3 — UI.** Full glassmorphism screens, MVVM ViewModels, navigation, and the model
+  download/placement flow.
 
 ## Project structure (Clean Architecture)
 
 ```
 com.ironmind.app
 ├── core/util          # DispatcherProvider, Constants — cross-cutting helpers
-├── domain             # Pure Kotlin — no Android/Room dependencies
-│   ├── model          # Exercise, Routine, WorkoutSession, SetLog, enums, aggregates
-│   └── repository     # WorkoutRepository (the contract the app depends on)
+├── domain             # Pure Kotlin — no Android/Room/MediaPipe dependencies
+│   ├── model          # Exercise, Routine, WorkoutSession, SetLog, enums, SuggestionState
+│   ├── ai             # LlmInferenceService (port), ProgressionPromptBuilder, exceptions
+│   ├── repository     # WorkoutRepository (the contract the app depends on)
+│   └── usecase        # GetProgressionSuggestionUseCase
 ├── data               # Implements the domain contracts
 │   ├── local
 │   │   ├── entity     # @Entity: Exercise, Routine, RoutineExerciseCrossRef, Session, SetLog
@@ -46,11 +51,25 @@ com.ironmind.app
 │   │   ├── dao        # WorkoutDao (Flow reads, suspend writes, @Transaction relations)
 │   │   ├── seed       # DefaultExercises — starter catalog on first launch
 │   │   └── IronMindDatabase.kt
+│   ├── ai             # LlmInferenceManager (MediaPipe), AiConstants
 │   ├── mapper         # entity <-> domain mappers
 │   └── repository     # WorkoutRepositoryImpl
-├── di                 # Hilt modules: Database, Repository, Coroutines
+├── di                 # Hilt modules: Database, Repository, Coroutines, Ai
 └── ui/theme           # Compose design system (black + gold + cyan, glassmorphism)
 ```
+
+## On-device AI (Stage 2)
+
+- **`LlmInferenceManager`** (`data/ai`) implements the domain port **`LlmInferenceService`**. It
+  lazily loads the MediaPipe engine on `Dispatchers.IO`, opens a session per request, and exposes
+  the streaming response as a `Flow<String>` via `callbackFlow` (typewriter effect).
+- **`GetProgressionSuggestionUseCase`** (`domain/usecase`) reads the recent history for an
+  exercise from Room, builds a structured Spanish coaching prompt with
+  **`ProgressionPromptBuilder`**, streams the model's answer, and emits **`SuggestionState`**
+  (`Loading` → accumulating `Success` → final `Success` / `Error`).
+- **Model file:** place a MediaPipe-compatible model (e.g. a Gemma `.bin`/`.task`) at
+  `filesDir/models/` (see `AiConstants.MODEL_FILE_NAME`). Kept out of the APK to stay small while
+  running fully offline. Missing model → a friendly `Error` state (`LlmModelNotFoundException`).
 
 ## Data model
 
@@ -72,7 +91,7 @@ Requires Android Studio (Ladybug+) or the Android SDK with `ANDROID_HOME` set.
 ```bash
 cd IronMind
 ./gradlew assembleDebug        # build the APK
-./gradlew testDebugUnitTest    # JVM unit tests (mappers)
+./gradlew testDebugUnitTest    # JVM unit tests (mappers, prompt builder, suggestion use case)
 ./gradlew connectedDebugAndroidTest   # instrumented Room DAO tests (device/emulator)
 ```
 

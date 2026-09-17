@@ -88,8 +88,8 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // On-device LLM — enabled in Stage 3 (Google AI Edge / MediaPipe LLM Inference API).
-    // implementation(libs.mediapipe.tasks.genai)
+    // On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — Stage 2.
+    implementation(libs.mediapipe.tasks.genai)
 
     // Unit testing
     testImplementation(libs.junit)

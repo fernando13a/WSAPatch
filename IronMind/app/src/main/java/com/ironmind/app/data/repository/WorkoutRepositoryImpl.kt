@@ -122,6 +122,11 @@ class WorkoutRepositoryImpl @Inject constructor(
             dao.getLastSetLogForExercise(exerciseId)?.toDomain()
         }
 
+    override suspend fun getRecentSetLogs(exerciseId: Long, limit: Int): List<SetLog> =
+        withContext(dispatchers.io) {
+            dao.getRecentSetLogsForExercise(exerciseId, limit).map { it.toDomain() }
+        }
+
     override suspend fun upsertSetLog(setLog: SetLog): Long = withContext(dispatchers.io) {
         dao.upsertSetLog(setLog.toEntity())
     }
