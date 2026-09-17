@@ -3,6 +3,8 @@
 
     <!-- Used only to download the on-device AI model once; inference runs fully offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Rest-timer completion buzz. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".IronMindApplication"

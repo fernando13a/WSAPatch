@@ -1,5 +1,13 @@
 package com.ironmind.app.ui.session
 
+import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,12 +37,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,6 +73,31 @@ fun SessionScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val restRemaining by viewModel.restRemaining.collectAsStateWithLifecycle()
+
+    // Keep the screen awake during a workout.
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
+    // Buzz + beep when the rest countdown finishes.
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.restFinished.collect { playRestAlert(context) }
+    }
+
+    // Live session timer (ticks every second once the session has started).
+    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowMillis = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
+    val elapsedSeconds = if (state.startedAt > 0) ((nowMillis - state.startedAt) / 1_000).toInt() else 0
+
+    var editingSet by remember { mutableStateOf<SetLog?>(null) }
 
     Scaffold(
         containerColor = Black,
@@ -91,6 +129,8 @@ fun SessionScreen(
             item {
                 GlassCard {
                     val totalSets = state.exerciseBlocks.sumOf { it.sets.size }
+                    LabeledValue("Tiempo", formatMmSs(elapsedSeconds))
+                    Spacer(Modifier.height(6.dp))
                     LabeledValue("Volumen total", "${state.totalVolume.toInt()} kg")
                     Spacer(Modifier.height(6.dp))
                     LabeledValue("Sets registrados", "$totalSets")
@@ -111,9 +151,24 @@ fun SessionScreen(
             item { SectionTitle("Ejercicios") }
 
             items(state.exerciseBlocks, key = { it.exerciseId }) { block ->
-                ExerciseBlockCard(block = block, onDeleteSet = viewModel::deleteSet)
+                ExerciseBlockCard(
+                    block = block,
+                    onEditSet = { editingSet = it },
+                    onDeleteSet = viewModel::deleteSet,
+                )
             }
         }
+    }
+
+    editingSet?.let { set ->
+        EditSetDialog(
+            set = set,
+            onDismiss = { editingSet = null },
+            onSave = { updated ->
+                viewModel.updateSet(updated)
+                editingSet = null
+            },
+        )
     }
 }
 
@@ -223,7 +278,11 @@ private fun AddSetCard(
 }
 
 @Composable
-private fun ExerciseBlockCard(block: ExerciseBlockUi, onDeleteSet: (SetLog) -> Unit) {
+private fun ExerciseBlockCard(
+    block: ExerciseBlockUi,
+    onEditSet: (SetLog) -> Unit,
+    onDeleteSet: (SetLog) -> Unit,
+) {
     GlassCard {
         Text(block.exerciseName, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
@@ -239,7 +298,11 @@ private fun ExerciseBlockCard(block: ExerciseBlockUi, onDeleteSet: (SetLog) -> U
                     Text(
                         "Set ${set.setNumber}:  ${set.weightKg.toInt()} kg × ${set.reps}",
                         color = Color.White,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onEditSet(set) },
                     )
+                    TextButton(onClick = { onEditSet(set) }) { Text("Editar", color = Cyan) }
                     TextButton(onClick = { onDeleteSet(set) }) { Text("✕", color = TextMuted) }
                 }
                 if (!set.notes.isNullOrBlank()) {
@@ -247,6 +310,79 @@ private fun ExerciseBlockCard(block: ExerciseBlockUi, onDeleteSet: (SetLog) -> U
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EditSetDialog(
+    set: SetLog,
+    onDismiss: () -> Unit,
+    onSave: (SetLog) -> Unit,
+) {
+    var weight by remember { mutableStateOf(set.weightKg.toString()) }
+    var reps by remember { mutableStateOf(set.reps.toString()) }
+    var notes by remember { mutableStateOf(set.notes ?: "") }
+    val weightValue = weight.toDoubleOrNull()
+    val repsValue = reps.toIntOrNull()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                enabled = weightValue != null && repsValue != null,
+                onClick = {
+                    if (weightValue != null && repsValue != null) {
+                        onSave(set.copy(weightKg = weightValue, reps = repsValue, notes = notes.takeIf { it.isNotBlank() }))
+                    }
+                },
+            ) { Text("Guardar", color = Cyan) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } },
+        title = { Text("Editar set ${set.setNumber}", color = Gold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it },
+                    label = { Text("Peso (kg)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = reps,
+                    onValueChange = { reps = it },
+                    label = { Text("Reps") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("Notas") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+    )
+}
+
+/** Short buzz + beep to signal the end of a rest period. Best-effort; ignores failures. */
+private fun playRestAlert(context: Context) {
+    runCatching {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        vibrator.vibrate(VibrationEffect.createOneShot(350, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+    runCatching {
+        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+        tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
     }
 }
 

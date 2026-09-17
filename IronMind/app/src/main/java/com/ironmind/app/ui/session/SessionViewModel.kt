@@ -11,9 +11,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -102,6 +105,10 @@ class SessionViewModel @Inject constructor(
     val restRemaining: StateFlow<Int> = _restRemaining.asStateFlow()
     private var restJob: Job? = null
 
+    /** Emits once each time the rest countdown reaches zero on its own (not when stopped). */
+    private val _restFinished = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val restFinished: SharedFlow<Unit> = _restFinished.asSharedFlow()
+
     fun startRest(seconds: Int) {
         restJob?.cancel()
         _restRemaining.value = seconds
@@ -110,6 +117,7 @@ class SessionViewModel @Inject constructor(
                 delay(1_000)
                 _restRemaining.value -= 1
             }
+            _restFinished.tryEmit(Unit)
         }
     }
 
