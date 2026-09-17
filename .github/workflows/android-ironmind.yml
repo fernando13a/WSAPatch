@@ -1,0 +1,51 @@
+name: Android CI (IronMind)
+
+on:
+  push:
+    branches: [ "claude/gym-tracking-app-offline-2qri5t" ]
+    paths:
+      - "IronMind/**"
+      - ".github/workflows/android-ironmind.yml"
+  pull_request:
+    paths:
+      - "IronMind/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: IronMind
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ironmind-debug-apk
+          path: IronMind/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

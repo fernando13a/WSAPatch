@@ -35,18 +35,23 @@ class SessionViewModel @Inject constructor(
     private val activeSessionId = MutableStateFlow(0L)
 
     init {
-        viewModelScope.launch {
-            activeSessionId.value = if (argSessionId != 0L) {
-                argSessionId
-            } else {
-                repository.startSession(
-                    WorkoutSession(
-                        startedAt = System.currentTimeMillis(),
-                        routineId = argRoutineId.takeIf { it != 0L },
-                    ),
-                )
-            }
-        }
+        // Only bind to an already-existing session. A brand-new session is created lazily on the
+        // first logged set (see ensureSession) so that entering and leaving without logging never
+        // persists an empty session that would inflate the streak / session count.
+        if (argSessionId != 0L) activeSessionId.value = argSessionId
+    }
+
+    /** Returns the active session id, creating the session on first use. */
+    private suspend fun ensureSession(): Long {
+        activeSessionId.value.takeIf { it != 0L }?.let { return it }
+        val id = repository.startSession(
+            WorkoutSession(
+                startedAt = System.currentTimeMillis(),
+                routineId = argRoutineId.takeIf { it != 0L },
+            ),
+        )
+        activeSessionId.value = id
+        return id
     }
 
     private val detailFlow = activeSessionId.flatMapLatest { id ->
@@ -70,7 +75,8 @@ class SessionViewModel @Inject constructor(
         }
 
         SessionUiState(
-            isLoading = detail == null,
+            // Render as soon as the catalog/plan are available, even before a session row exists.
+            isLoading = false,
             sessionId = detail?.session?.id ?: 0,
             title = plan?.routine?.name ?: detail?.session?.title ?: "Sesión libre",
             startedAt = detail?.session?.startedAt ?: 0,
@@ -114,11 +120,11 @@ class SessionViewModel @Inject constructor(
 
     // ---- Set logging ----------------------------------------------------------------
     fun addSet(exerciseId: Long, weightKg: Double, reps: Int, notes: String?, autoRestSeconds: Int? = 90) {
-        val id = activeSessionId.value
-        if (id == 0L || exerciseId == 0L) return
+        if (exerciseId == 0L) return
         val nextSetNumber =
             (uiState.value.exerciseBlocks.firstOrNull { it.exerciseId == exerciseId }?.sets?.size ?: 0) + 1
         viewModelScope.launch {
+            val id = ensureSession()
             repository.upsertSetLog(
                 SetLog(
                     sessionId = id,
@@ -131,6 +137,11 @@ class SessionViewModel @Inject constructor(
             )
         }
         autoRestSeconds?.let { startRest(it) }
+    }
+
+    /** Edits an existing set in place (same id). */
+    fun updateSet(set: SetLog) {
+        viewModelScope.launch { repository.upsertSetLog(set) }
     }
 
     fun deleteSet(set: SetLog) {
