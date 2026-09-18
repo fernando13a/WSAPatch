@@ -1,12 +1,10 @@
 package com.ironmind.app.ui.session
 
-import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
@@ -84,10 +83,19 @@ fun SessionScreen(
         onDispose { view.keepScreenOn = false }
     }
 
-    // Buzz + beep when the rest countdown finishes.
+    // Ask for notification permission (Android 13+) so the rest-timer alert can reach the user when
+    // the app is backgrounded. Denial is fine — the in-app countdown keeps working either way.
     val context = LocalContext.current
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* result ignored; the notifier guards on areNotificationsEnabled() */ }
     LaunchedEffect(Unit) {
-        viewModel.restFinished.collect { playRestAlert(context) }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     // Live session timer (ticks every second once the session has started).
@@ -374,23 +382,6 @@ private fun EditSetDialog(
             }
         },
     )
-}
-
-/** Short buzz + beep to signal the end of a rest period. Best-effort; ignores failures. */
-private fun playRestAlert(context: Context) {
-    runCatching {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        vibrator.vibrate(VibrationEffect.createOneShot(350, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
-    runCatching {
-        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-        tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
-    }
 }
 
 private fun formatMmSs(totalSeconds: Int): String {

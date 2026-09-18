@@ -47,6 +47,11 @@
     <string name="rest_title">Rest</string>
     <string name="rest_stop">Stop</string>
     <string name="rest_seconds">%1$ds</string>
+    <string name="rest_channel_progress">Rest in progress</string>
+    <string name="rest_channel_alert">Rest finished</string>
+    <string name="rest_notif_remaining">Rest: %1$s</string>
+    <string name="rest_notif_done_title">Rest complete!</string>
+    <string name="rest_notif_done_body">Tap to return to your session</string>
     <string name="add_set_title">Log set</string>
     <string name="select_exercise">Select exercise</string>
     <string name="weight_kg">Weight (kg)</string>

@@ -6,17 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
+import com.ironmind.app.notification.RestTimerNotifier
 import com.ironmind.app.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -29,6 +27,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SessionViewModel @Inject constructor(
     private val repository: WorkoutRepository,
+    private val restNotifier: RestTimerNotifier,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -105,25 +104,26 @@ class SessionViewModel @Inject constructor(
     val restRemaining: StateFlow<Int> = _restRemaining.asStateFlow()
     private var restJob: Job? = null
 
-    /** Emits once each time the rest countdown reaches zero on its own (not when stopped). */
-    private val _restFinished = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val restFinished: SharedFlow<Unit> = _restFinished.asSharedFlow()
-
     fun startRest(seconds: Int) {
         restJob?.cancel()
         _restRemaining.value = seconds
+        // Mirror the countdown into a notification so a backgrounded / pocketed user gets the buzz
+        // when it ends, not only while the Session screen is on-screen.
+        restNotifier.showCountdown(seconds)
         restJob = viewModelScope.launch {
             while (_restRemaining.value > 0) {
                 delay(1_000)
                 _restRemaining.value -= 1
+                if (_restRemaining.value > 0) restNotifier.showCountdown(_restRemaining.value)
             }
-            _restFinished.tryEmit(Unit)
+            restNotifier.showComplete()
         }
     }
 
     fun stopRest() {
         restJob?.cancel()
         _restRemaining.value = 0
+        restNotifier.cancel()
     }
 
     // ---- Set logging ----------------------------------------------------------------
@@ -157,6 +157,7 @@ class SessionViewModel @Inject constructor(
     }
 
     fun finishSession(onDone: () -> Unit) {
+        stopRest()
         val id = activeSessionId.value
         if (id == 0L) {
             onDone()
@@ -168,5 +169,11 @@ class SessionViewModel @Inject constructor(
             }
             onDone()
         }
+    }
+
+    override fun onCleared() {
+        // Don't leave a stuck "resting" notification behind if the screen is torn down mid-rest.
+        restNotifier.cancel()
+        super.onCleared()
     }
 }

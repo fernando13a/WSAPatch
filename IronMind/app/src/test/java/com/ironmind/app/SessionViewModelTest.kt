@@ -23,7 +23,7 @@ class SessionViewModelTest {
     @Test
     fun noSessionIsCreatedUntilFirstSetIsLogged() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, freeSessionHandle())
+        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), freeSessionHandle())
 
         assertEquals(0, repo.startSessionCount)
 
@@ -37,7 +37,7 @@ class SessionViewModelTest {
     @Test
     fun finishSessionWithoutLoggingDoesNotPersistAnything() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, freeSessionHandle())
+        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), freeSessionHandle())
 
         var done = false
         vm.finishSession { done = true }
@@ -50,12 +50,18 @@ class SessionViewModelTest {
     @Test
     fun restTimerStartsAndStops() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, freeSessionHandle())
+        val notifier = FakeRestTimerNotifier()
+        val vm = SessionViewModel(repo, notifier, freeSessionHandle())
 
         vm.startRest(90)
         assertEquals(90, vm.restRemaining.value)
+        // Starting a rest posts the initial countdown to the notification.
+        assertEquals(90, notifier.countdownValues.first())
 
         vm.stopRest()
         assertEquals(0, vm.restRemaining.value)
+        // Stopping clears the notification and never fires the completion alert.
+        assertEquals(1, notifier.cancelCount)
+        assertEquals(0, notifier.completeCount)
     }
 }

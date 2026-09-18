@@ -48,6 +48,11 @@
     <string name="rest_title">Descanso</string>
     <string name="rest_stop">Detener</string>
     <string name="rest_seconds">%1$ds</string>
+    <string name="rest_channel_progress">Descanso en curso</string>
+    <string name="rest_channel_alert">Fin del descanso</string>
+    <string name="rest_notif_remaining">Descanso: %1$s</string>
+    <string name="rest_notif_done_title">¡Descanso terminado!</string>
+    <string name="rest_notif_done_body">Toca para volver a tu sesión</string>
     <string name="add_set_title">Registrar set</string>
     <string name="select_exercise">Selecciona ejercicio</string>
     <string name="weight_kg">Peso (kg)</string>
