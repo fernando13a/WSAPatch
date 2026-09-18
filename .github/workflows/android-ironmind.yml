@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # needed to publish the debug APK as a Release asset
 
 jobs:
   build:
@@ -67,6 +67,25 @@ jobs:
           name: ironmind-release-apk-unsigned
           path: IronMind/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      # Publish the debug APK as a Release asset so it can be downloaded and installed directly
+      # from a phone (a stable link, no GitHub login or zip needed). The debug APK is debug-signed,
+      # so it installs on any device; the release APK stays unsigned and is not published here.
+      - name: Publish debug APK to a Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-debug
+          name: IronMind (debug APK)
+          prerelease: true
+          files: IronMind/app/build/outputs/apk/debug/*.apk
+          body: |
+            Debug build of IronMind for on-device testing (latest from the
+            `claude/gym-tracking-app-offline-2qri5t` branch).
+
+            Install: open the `.apk` on your Android phone (8.0+), allow "install unknown apps"
+            for your browser/files app, then tap Install. For the AI coach, use
+            *IA on-device → Importar modelo desde archivo* to select a MediaPipe `.task` model.
 
   # Run the instrumented tests (Room DAO + backup restore) on a real emulator. Kept in a
   # separate job because it needs KVM + a booted emulator, which the unit-test/build job does not.
