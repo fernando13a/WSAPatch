@@ -23,6 +23,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ironmind.app.R
+import com.ironmind.app.ui.backup.BackupScreen
 import com.ironmind.app.ui.dashboard.DashboardScreen
 import com.ironmind.app.ui.model.ModelDownloadScreen
 import com.ironmind.app.ui.progress.ProgressScreen
@@ -67,6 +68,7 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                         navController.navigate(Destinations.routineEdit(routineId))
                     },
                     onDownloadModel = { navController.navigate(Destinations.MODEL_ROUTE) },
+                    onOpenBackup = { navController.navigate(Destinations.BACKUP_ROUTE) },
                 )
             }
 
@@ -100,6 +102,10 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
 
             composable(Destinations.MODEL_ROUTE) {
                 ModelDownloadScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(Destinations.BACKUP_ROUTE) {
+                BackupScreen(onBack = { navController.popBackStack() })
             }
         }
     }

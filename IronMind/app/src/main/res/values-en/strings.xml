@@ -92,6 +92,22 @@
     <string name="muscle_group_label">Muscle group</string>
     <string name="equipment_label">Equipment</string>
 
+    <!-- Data backup / restore -->
+    <string name="backup_title">Data</string>
+    <string name="backup_filename">ironmind-backup.json</string>
+    <string name="backup_export_title">Export backup</string>
+    <string name="backup_export_desc">Save all your data (exercises, routines, sessions and sets) to a JSON file you can keep or move to another device. Everything happens on your phone.</string>
+    <string name="backup_export_action">Export</string>
+    <string name="backup_import_title">Restore backup</string>
+    <string name="backup_import_desc">Import a backup file. Warning: it will replace all your current data.</string>
+    <string name="backup_import_action">Import</string>
+    <string name="backup_restore_confirm_title">Restore backup?</string>
+    <string name="backup_restore_confirm_body">This will replace all your current data with the file\'s contents. It can\'t be undone.</string>
+    <string name="backup_working">Working…</string>
+    <string name="backup_exported">Backup exported ✓</string>
+    <string name="backup_imported">Restored: %1$d exercises · %2$d routines · %3$d sessions · %4$d sets</string>
+    <string name="backup_error">Error: %1$s</string>
+
     <!-- Model download -->
     <string name="model_title">AI model</string>
     <string name="model_ondevice_title">On-device AI</string>

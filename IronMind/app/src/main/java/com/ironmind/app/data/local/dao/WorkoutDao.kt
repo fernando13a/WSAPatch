@@ -3,6 +3,7 @@ package com.ironmind.app.data.local.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -136,4 +137,49 @@ interface WorkoutDao {
 
     @Delete
     suspend fun deleteSetLog(setLog: SetLogEntity)
+
+    // ---------------------------------------------------------------------------------
+    // Full-database backup / restore
+    // ---------------------------------------------------------------------------------
+    @Query("SELECT * FROM routines")
+    suspend fun getAllRoutinesOnce(): List<RoutineEntity>
+
+    @Query("SELECT * FROM routine_exercise_cross_ref")
+    suspend fun getAllRoutineExercisesOnce(): List<RoutineExerciseCrossRef>
+
+    @Query("SELECT * FROM workout_sessions")
+    suspend fun getAllSessionsOnce(): List<WorkoutSessionEntity>
+
+    @Query("SELECT * FROM set_logs")
+    suspend fun getAllSetLogsOnce(): List<SetLogEntity>
+
+    @Query("DELETE FROM set_logs")
+    suspend fun deleteAllSetLogs()
+
+    @Query("DELETE FROM routine_exercise_cross_ref")
+    suspend fun deleteAllRoutineExercises()
+
+    @Query("DELETE FROM workout_sessions")
+    suspend fun deleteAllSessions()
+
+    @Query("DELETE FROM routines")
+    suspend fun deleteAllRoutines()
+
+    @Query("DELETE FROM exercises")
+    suspend fun deleteAllExercises()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExercises(exercises: List<ExerciseEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoutines(routines: List<RoutineEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoutineExercises(crossRefs: List<RoutineExerciseCrossRef>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSessions(sessions: List<WorkoutSessionEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSetLogs(setLogs: List<SetLogEntity>)
 }

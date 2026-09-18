@@ -13,6 +13,7 @@ object Destinations {
     const val PROGRESS_ROUTE = "progress?$ARG_EXERCISE_ID={$ARG_EXERCISE_ID}"
     const val ROUTINE_EDIT_ROUTE = "routineEdit?$ARG_ROUTINE_ID={$ARG_ROUTINE_ID}"
     const val MODEL_ROUTE = "model"
+    const val BACKUP_ROUTE = "backup"
 
     /** Builds a session route. sessionId=0 means "start a new session" (optionally from routineId). */
     fun session(sessionId: Long = 0L, routineId: Long = 0L): String =

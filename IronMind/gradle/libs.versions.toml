@@ -24,6 +24,9 @@ hiltNavigationCompose = "1.2.0"
 # Concurrency
 coroutines = "1.9.0"
 
+# Serialization (JSON backup / export)
+kotlinxSerialization = "1.7.3"
+
 # On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — wired in Stage 3
 mediapipeGenai = "0.10.24"
 
@@ -64,6 +67,9 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
+# Serialization
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
 # On-device LLM — referenced in Stage 3 (kept here so the catalog is ready)
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeGenai" }
 
@@ -87,5 +93,6 @@ compose = [
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
