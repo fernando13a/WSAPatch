@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">IronMind</string>
+    <string name="nav_home">Inicio</string>
 
     <!-- Common actions -->
     <string name="action_back">Volver</string>
