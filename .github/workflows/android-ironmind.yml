@@ -53,3 +53,17 @@ jobs:
           name: ironmind-debug-apk
           path: IronMind/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # Build the release APK too, so R8/minify actually runs against the
+      # ProGuard keep rules (Room, Hilt, MediaPipe). Debug never minifies, so
+      # this is the only place a broken shrink config would surface in CI.
+      # No signing config is set, so this produces an *unsigned* release APK.
+      - name: Assemble release APK (R8 / minify)
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Upload release APK (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ironmind-release-apk-unsigned
+          path: IronMind/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
