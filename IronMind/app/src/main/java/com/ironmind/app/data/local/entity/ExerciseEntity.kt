@@ -18,4 +18,8 @@ data class ExerciseEntity(
     val equipment: Equipment,
     val description: String? = null,
     val isCustom: Boolean = true,
+    /** Step-by-step technique cues shown on the exercise detail screen (offline). */
+    val instructions: String? = null,
+    /** Absolute path to a user-attached reference image on this device, if any. */
+    val imagePath: String? = null,
 )

@@ -25,7 +25,7 @@ import com.ironmind.app.data.local.entity.WorkoutSessionEntity
         WorkoutSessionEntity::class,
         SetLogEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

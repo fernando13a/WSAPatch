@@ -14,6 +14,7 @@ object Destinations {
     const val ROUTINE_EDIT_ROUTE = "routineEdit?$ARG_ROUTINE_ID={$ARG_ROUTINE_ID}"
     const val MODEL_ROUTE = "model"
     const val BACKUP_ROUTE = "backup"
+    const val EXERCISE_DETAIL_ROUTE = "exerciseDetail?$ARG_EXERCISE_ID={$ARG_EXERCISE_ID}"
 
     /** Builds a session route. sessionId=0 means "start a new session" (optionally from routineId). */
     fun session(sessionId: Long = 0L, routineId: Long = 0L): String =
@@ -26,4 +27,8 @@ object Destinations {
     /** Builds a routine-edit route. routineId=0 means "create a new routine". */
     fun routineEdit(routineId: Long = 0L): String =
         "routineEdit?$ARG_ROUTINE_ID=$routineId"
+
+    /** Builds an exercise-detail route (equipment, how-to guide, reference image). */
+    fun exerciseDetail(exerciseId: Long): String =
+        "exerciseDetail?$ARG_EXERCISE_ID=$exerciseId"
 }

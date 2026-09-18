@@ -1,5 +1,6 @@
 package com.ironmind.app.ui.routineedit
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,7 @@ import com.ironmind.app.ui.theme.TextMuted
 @Composable
 fun RoutineEditScreen(
     onDone: () -> Unit,
+    onOpenExercise: (Long) -> Unit = {},
     viewModel: RoutineEditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.ui.collectAsStateWithLifecycle()
@@ -125,7 +127,12 @@ fun RoutineEditScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(stringResource(R.string.numbered_exercise, index + 1, exercise.name), modifier = Modifier.weight(1f))
+                            Text(
+                                stringResource(R.string.numbered_exercise, index + 1, exercise.name),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpenExercise(exercise.id) },
+                            )
                             IconButton(onClick = { viewModel.move(index, index - 1) }) {
                                 Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.action_move_up), tint = Cyan)
                             }

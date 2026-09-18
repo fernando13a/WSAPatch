@@ -12,4 +12,8 @@ data class Exercise(
     val description: String? = null,
     /** `true` for user-created exercises, `false` for the seeded catalog. */
     val isCustom: Boolean = true,
+    /** Step-by-step technique cues (how to perform it). */
+    val instructions: String? = null,
+    /** Absolute path to a user-attached reference image on this device, if any. */
+    val imagePath: String? = null,
 )

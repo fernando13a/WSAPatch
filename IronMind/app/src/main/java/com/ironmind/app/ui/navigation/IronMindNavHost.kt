@@ -25,6 +25,7 @@ import androidx.navigation.navArgument
 import com.ironmind.app.R
 import com.ironmind.app.ui.backup.BackupScreen
 import com.ironmind.app.ui.dashboard.DashboardScreen
+import com.ironmind.app.ui.exercise.ExerciseDetailScreen
 import com.ironmind.app.ui.model.ModelDownloadScreen
 import com.ironmind.app.ui.progress.ProgressScreen
 import com.ironmind.app.ui.routineedit.RoutineEditScreen
@@ -79,7 +80,12 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                     navArgument(Destinations.ARG_ROUTINE_ID) { type = NavType.LongType; defaultValue = 0L },
                 ),
             ) {
-                SessionScreen(onBack = { navController.popBackStack() })
+                SessionScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenExercise = { exerciseId ->
+                        navController.navigate(Destinations.exerciseDetail(exerciseId))
+                    },
+                )
             }
 
             composable(
@@ -97,7 +103,12 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                     navArgument(Destinations.ARG_ROUTINE_ID) { type = NavType.LongType; defaultValue = 0L },
                 ),
             ) {
-                RoutineEditScreen(onDone = { navController.popBackStack() })
+                RoutineEditScreen(
+                    onDone = { navController.popBackStack() },
+                    onOpenExercise = { exerciseId ->
+                        navController.navigate(Destinations.exerciseDetail(exerciseId))
+                    },
+                )
             }
 
             composable(Destinations.MODEL_ROUTE) {
@@ -106,6 +117,15 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
 
             composable(Destinations.BACKUP_ROUTE) {
                 BackupScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(
+                route = Destinations.EXERCISE_DETAIL_ROUTE,
+                arguments = listOf(
+                    navArgument(Destinations.ARG_EXERCISE_ID) { type = NavType.LongType; defaultValue = 0L },
+                ),
+            ) {
+                ExerciseDetailScreen(onBack = { navController.popBackStack() })
             }
         }
     }

@@ -108,6 +108,15 @@
     <string name="backup_imported">Restored: %1$d exercises · %2$d routines · %3$d sessions · %4$d sets</string>
     <string name="backup_error">Error: %1$s</string>
 
+    <!-- Exercise detail (equipment + how-to guide + reference image) -->
+    <string name="instructions_title">How to do it</string>
+    <string name="instructions_empty">No guide yet for this exercise. You can attach a reference image above.</string>
+    <string name="reference_image_title">Reference image</string>
+    <string name="reference_image_cd">Exercise reference image</string>
+    <string name="reference_image_hint">Attach your own photo or GIF to remember the technique or equipment. It stays on your device.</string>
+    <string name="reference_image_add">Add image</string>
+    <string name="reference_image_replace">Replace image</string>
+
     <!-- Model download -->
     <string name="model_title">AI model</string>
     <string name="model_ondevice_title">On-device AI</string>

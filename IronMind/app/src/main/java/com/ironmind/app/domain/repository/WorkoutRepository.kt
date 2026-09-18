@@ -20,6 +20,7 @@ interface WorkoutRepository {
     fun observeExercises(): Flow<List<Exercise>>
     fun observeExercisesByMuscleGroup(muscleGroup: MuscleGroup): Flow<List<Exercise>>
     fun searchExercises(query: String): Flow<List<Exercise>>
+    fun observeExercise(id: Long): Flow<Exercise?>
     suspend fun getExercise(id: Long): Exercise?
     suspend fun upsertExercise(exercise: Exercise): Long
     suspend fun deleteExercise(exercise: Exercise)

@@ -37,6 +37,9 @@ class WorkoutRepositoryImpl @Inject constructor(
     override fun searchExercises(query: String): Flow<List<Exercise>> =
         dao.searchExercises(query).map { list -> list.map { it.toDomain() } }
 
+    override fun observeExercise(id: Long): Flow<Exercise?> =
+        dao.observeExerciseById(id).map { it?.toDomain() }
+
     override suspend fun getExercise(id: Long): Exercise? = withContext(dispatchers.io) {
         dao.getExerciseById(id)?.toDomain()
     }

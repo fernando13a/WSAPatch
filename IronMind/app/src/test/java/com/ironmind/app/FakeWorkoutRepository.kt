@@ -10,6 +10,7 @@ import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 
 /**
  * In-memory, controllable fake of [WorkoutRepository]. Observable reads are backed by
@@ -49,6 +50,8 @@ class FakeWorkoutRepository : WorkoutRepository {
     override fun observeExercises(): Flow<List<Exercise>> = exercisesFlow
     override fun observeExercisesByMuscleGroup(muscleGroup: MuscleGroup): Flow<List<Exercise>> = exercisesFlow
     override fun searchExercises(query: String): Flow<List<Exercise>> = exercisesFlow
+    override fun observeExercise(id: Long): Flow<Exercise?> =
+        exercisesFlow.map { list -> list.firstOrNull { it.id == id } }
     override suspend fun getExercise(id: Long): Exercise? = exercisesFlow.value.firstOrNull { it.id == id }
     override suspend fun upsertExercise(exercise: Exercise): Long {
         val id = if (exercise.id == 0L) nextExerciseId++ else exercise.id

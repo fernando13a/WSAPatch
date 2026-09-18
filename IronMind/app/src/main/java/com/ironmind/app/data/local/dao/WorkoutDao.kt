@@ -41,6 +41,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM exercises WHERE id = :id")
     suspend fun getExerciseById(id: Long): ExerciseEntity?
 
+    @Query("SELECT * FROM exercises WHERE id = :id")
+    fun observeExerciseById(id: Long): Flow<ExerciseEntity?>
+
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun countExercises(): Int
 

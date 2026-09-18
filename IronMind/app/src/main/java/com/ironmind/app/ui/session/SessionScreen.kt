@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -71,6 +72,7 @@ import com.ironmind.app.ui.theme.TextMuted
 @Composable
 fun SessionScreen(
     onBack: () -> Unit,
+    onOpenExercise: (Long) -> Unit = {},
     viewModel: SessionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -166,6 +168,7 @@ fun SessionScreen(
                     block = block,
                     onEditSet = { editingSet = it },
                     onDeleteSet = viewModel::deleteSet,
+                    onOpen = { onOpenExercise(block.exerciseId) },
                 )
             }
         }
@@ -295,9 +298,24 @@ private fun ExerciseBlockCard(
     block: ExerciseBlockUi,
     onEditSet: (SetLog) -> Unit,
     onDeleteSet: (SetLog) -> Unit,
+    onOpen: () -> Unit,
 ) {
     GlassCard {
-        Text(block.exerciseName, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onOpen() },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                block.exerciseName,
+                style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onOpen) {
+                Icon(Icons.Filled.Info, contentDescription = stringResource(R.string.instructions_title), tint = Cyan)
+            }
+        }
         Spacer(Modifier.height(8.dp))
         if (block.sets.isEmpty()) {
             Text(stringResource(R.string.no_sets_yet), color = TextMuted)

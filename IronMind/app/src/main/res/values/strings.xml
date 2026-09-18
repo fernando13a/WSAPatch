@@ -109,6 +109,15 @@
     <string name="backup_imported">Restaurado: %1$d ejercicios · %2$d rutinas · %3$d sesiones · %4$d sets</string>
     <string name="backup_error">Error: %1$s</string>
 
+    <!-- Exercise detail (equipment + how-to guide + reference image) -->
+    <string name="instructions_title">Cómo hacerlo</string>
+    <string name="instructions_empty">Aún no hay guía para este ejercicio. Puedes adjuntar una imagen de referencia arriba.</string>
+    <string name="reference_image_title">Imagen de referencia</string>
+    <string name="reference_image_cd">Imagen de referencia del ejercicio</string>
+    <string name="reference_image_hint">Adjunta tu propia foto o GIF para recordar la técnica o el equipo. Se guarda en tu dispositivo.</string>
+    <string name="reference_image_add">Añadir imagen</string>
+    <string name="reference_image_replace">Cambiar imagen</string>
+
     <!-- Model download -->
     <string name="model_title">Modelo de IA</string>
     <string name="model_ondevice_title">IA on-device</string>
