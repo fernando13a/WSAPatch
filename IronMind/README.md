@@ -116,4 +116,7 @@ cd IronMind
 ```
 
 - **Min SDK:** 26 · **Target/Compile SDK:** 35 · **JDK:** 17
-- Room schemas are exported to `app/schemas/` for future migrations.
+- Room schemas are exported to `app/schemas/` (commit the generated JSON after a build).
+- **Migrations:** real migrations live in `data/local/Migrations.kt` (empty at v1). Release
+  builds require them; only debug builds fall back to a destructive recreate. When you bump the
+  DB version, add the `Migration` there and validate it with `MigrationTestHelper`.
