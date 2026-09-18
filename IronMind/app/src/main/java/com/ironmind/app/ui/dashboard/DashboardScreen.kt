@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +66,7 @@ fun DashboardScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val suggestion by viewModel.suggestion.collectAsStateWithLifecycle()
     val modelAvailable by viewModel.modelAvailable.collectAsStateWithLifecycle()
+    val showModelPrompt by viewModel.showModelPrompt.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.refreshModelAvailability() }
 
@@ -144,6 +146,25 @@ fun DashboardScreen(
                 )
             }
         }
+    }
+
+    if (showModelPrompt) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissModelPrompt() },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.dismissModelPrompt()
+                    onDownloadModel()
+                }) { Text(stringResource(R.string.ai_download_model), color = Cyan) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissModelPrompt() }) {
+                    Text(stringResource(R.string.model_prompt_later), color = TextMuted)
+                }
+            },
+            title = { Text(stringResource(R.string.model_prompt_title), color = Gold) },
+            text = { Text(stringResource(R.string.model_prompt_body), color = TextMuted) },
+        )
     }
 }
 

@@ -119,6 +119,9 @@
 
     <!-- Model download -->
     <string name="model_title">AI model</string>
+    <string name="model_prompt_title">Enable the AI coach</string>
+    <string name="model_prompt_body">Download the model once (~555 MB, Wi-Fi recommended). Afterwards the coach works 100% offline. You can also do this later from the coach panel.</string>
+    <string name="model_prompt_later">Not now</string>
     <string name="model_ondevice_title">On-device AI</string>
     <string name="model_desc">The AI coach runs 100% on your device. Download a MediaPipe-compatible model once (e.g. Gemma). It works offline afterward.</string>
     <string name="model_url_label">Model URL (.bin / .task)</string>

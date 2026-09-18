@@ -16,6 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -38,7 +39,7 @@ class DashboardViewModelTest {
     }
 
     private fun viewModel(repo: FakeWorkoutRepository, llm: FakeLlmInferenceService) =
-        DashboardViewModel(repo, GetProgressionSuggestionUseCase(repo, llm), llm)
+        DashboardViewModel(repo, GetProgressionSuggestionUseCase(repo, llm), llm, FakeAppPreferences())
 
     @Test
     fun uiState_computesStreakSessionsRoutineProgressAndFocus() = runTest(mainRule.dispatcher) {
@@ -60,6 +61,19 @@ class DashboardViewModelTest {
         val repo = repositoryWithOneSession()
         val vm = viewModel(repo, FakeLlmInferenceService(modelAvailable = true))
         assertTrue(vm.modelAvailable.value)
+        // Model present -> no first-launch download prompt.
+        assertFalse(vm.showModelPrompt.value)
+    }
+
+    @Test
+    fun firstLaunchModelPrompt_showsWhenMissingThenDismisses() = runTest(mainRule.dispatcher) {
+        val repo = repositoryWithOneSession()
+        val vm = viewModel(repo, FakeLlmInferenceService(modelAvailable = false))
+
+        assertTrue(vm.showModelPrompt.value)
+
+        vm.dismissModelPrompt()
+        assertFalse(vm.showModelPrompt.value)
     }
 
     @Test

@@ -120,6 +120,9 @@
 
     <!-- Model download -->
     <string name="model_title">Modelo de IA</string>
+    <string name="model_prompt_title">Activa el coach IA</string>
+    <string name="model_prompt_body">Descarga el modelo una vez (~555 MB, mejor con Wi-Fi). Después el coach funciona 100% sin conexión. Puedes hacerlo más tarde desde el panel del coach.</string>
+    <string name="model_prompt_later">Ahora no</string>
     <string name="model_ondevice_title">IA on-device</string>
     <string name="model_desc">El coach de IA corre 100% en tu dispositivo. Descarga una vez un modelo compatible con MediaPipe (p. ej. Gemma). Después funciona sin conexión.</string>
     <string name="model_url_label">URL del modelo (.bin / .task)</string>

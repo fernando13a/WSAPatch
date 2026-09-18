@@ -2,6 +2,7 @@ package com.ironmind.app.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ironmind.app.data.preferences.AppPreferences
 import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.repository.WorkoutRepository
@@ -24,14 +25,29 @@ class DashboardViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val getProgressionSuggestion: GetProgressionSuggestionUseCase,
     private val llmInferenceService: LlmInferenceService,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
 
     private val _modelAvailable = MutableStateFlow(false)
     val modelAvailable: StateFlow<Boolean> = _modelAvailable.asStateFlow()
 
+    /** One-time first-launch prompt to download the AI model when it isn't on the device yet. */
+    private val _showModelPrompt = MutableStateFlow(false)
+    val showModelPrompt: StateFlow<Boolean> = _showModelPrompt.asStateFlow()
+
     /** Re-checks whether the on-device model is present (call on resume / after downloading). */
     fun refreshModelAvailability() {
-        viewModelScope.launch { _modelAvailable.value = llmInferenceService.isModelAvailable() }
+        viewModelScope.launch {
+            val available = llmInferenceService.isModelAvailable()
+            _modelAvailable.value = available
+            _showModelPrompt.value = !available && !appPreferences.modelDownloadPrompted
+        }
+    }
+
+    /** Dismisses the first-launch prompt so it isn't shown again (whatever the user chose). */
+    fun dismissModelPrompt() {
+        appPreferences.modelDownloadPrompted = true
+        _showModelPrompt.value = false
     }
 
     init {
