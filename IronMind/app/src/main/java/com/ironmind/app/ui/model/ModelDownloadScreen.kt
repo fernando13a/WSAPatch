@@ -1,5 +1,7 @@
 package com.ironmind.app.ui.model
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -49,6 +52,10 @@ fun ModelDownloadScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var url by remember { mutableStateOf(viewModel.defaultUrl) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::importFromFile) }
 
     Scaffold(
         containerColor = Black,
@@ -121,6 +128,18 @@ fun ModelDownloadScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                }
+
+                // Alternative to downloading: pick a model file already on the device.
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.model_or_import), color = TextMuted)
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { importLauncher.launch(arrayOf("*/*")) },
+                    enabled = state !is ModelDownloadState.Downloading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.model_import_file), color = Cyan)
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.ironmind.app.ui.model
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ironmind.app.data.ai.AiConstants
@@ -28,6 +29,13 @@ class ModelDownloadViewModel @Inject constructor(
         if (url.isBlank()) return
         viewModelScope.launch {
             downloader.download(url.trim()).collect { _state.value = it }
+        }
+    }
+
+    /** Imports a model file the user picked from device storage. */
+    fun importFromFile(uri: Uri) {
+        viewModelScope.launch {
+            downloader.importFromFile(uri).collect { _state.value = it }
         }
     }
 }

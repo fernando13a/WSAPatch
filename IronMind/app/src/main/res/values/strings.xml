@@ -118,4 +118,6 @@
     <string name="model_downloading">Descargando…</string>
     <string name="model_ready">Modelo listo ✓</string>
     <string name="model_error">Error: %1$s</string>
+    <string name="model_or_import">¿Ya tienes el archivo del modelo en el teléfono?</string>
+    <string name="model_import_file">Importar modelo desde archivo</string>
 </resources>
