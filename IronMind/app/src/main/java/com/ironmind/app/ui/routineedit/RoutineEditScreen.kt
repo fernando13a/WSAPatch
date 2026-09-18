@@ -13,6 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -123,9 +126,15 @@ fun RoutineEditScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(stringResource(R.string.numbered_exercise, index + 1, exercise.name), modifier = Modifier.weight(1f))
-                            TextButton(onClick = { viewModel.move(index, index - 1) }) { Text("↑", color = Cyan) }
-                            TextButton(onClick = { viewModel.move(index, index + 1) }) { Text("↓", color = Cyan) }
-                            TextButton(onClick = { viewModel.removeExercise(exercise) }) { Text("✕", color = TextMuted) }
+                            IconButton(onClick = { viewModel.move(index, index - 1) }) {
+                                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.action_move_up), tint = Cyan)
+                            }
+                            IconButton(onClick = { viewModel.move(index, index + 1) }) {
+                                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.action_move_down), tint = Cyan)
+                            }
+                            IconButton(onClick = { viewModel.removeExercise(exercise) }) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_delete), tint = TextMuted)
+                            }
                         }
                     }
                 }

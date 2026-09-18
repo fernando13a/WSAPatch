@@ -11,6 +11,10 @@
     <string name="action_edit">Editar</string>
     <string name="action_close">Cerrar</string>
     <string name="action_create">Crear</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_move_up">Subir</string>
+    <string name="action_move_down">Bajar</string>
+    <string name="chart_cd">Gráfico de evolución de carga</string>
 
     <!-- Dashboard -->
     <string name="dash_streak_label">Racha (días)</string>

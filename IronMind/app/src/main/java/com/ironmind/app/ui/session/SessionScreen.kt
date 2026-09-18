@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -307,7 +308,9 @@ private fun ExerciseBlockCard(
                             .clickable { onEditSet(set) },
                     )
                     TextButton(onClick = { onEditSet(set) }) { Text(stringResource(R.string.action_edit), color = Cyan) }
-                    TextButton(onClick = { onDeleteSet(set) }) { Text("✕", color = TextMuted) }
+                    IconButton(onClick = { onDeleteSet(set) }) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_delete), tint = TextMuted)
+                    }
                 }
                 if (!set.notes.isNullOrBlank()) {
                     Text("  ${set.notes}", color = TextMuted, style = androidx.compose.material3.MaterialTheme.typography.labelLarge)

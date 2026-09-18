@@ -13,7 +13,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.ironmind.app.R
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
 import kotlin.math.roundToInt
@@ -33,9 +37,12 @@ fun LoadChart(
     val maxV = points.maxOfOrNull { it.value } ?: 0f
     val minV = points.minOfOrNull { it.value } ?: 0f
     val range = (maxV - minV).takeIf { it > 0f } ?: 1f
+    val chartDescription = stringResource(R.string.chart_cd)
 
     Canvas(
-        modifier = modifier.pointerInput(points.size) {
+        modifier = modifier
+            .semantics { contentDescription = chartDescription }
+            .pointerInput(points.size) {
             detectTapGestures { offset ->
                 if (points.isEmpty()) return@detectTapGestures
                 val idx = if (points.size == 1) {
