@@ -41,6 +41,7 @@ data class ExerciseDto(
     val isCustom: Boolean = true,
     val instructions: String? = null,
     val imagePath: String? = null,
+    val imageUrl: String? = null,
 )
 
 @Serializable
@@ -92,7 +93,7 @@ data class SetLogDto(
 // ---- Entity <-> DTO mapping ---------------------------------------------------------------
 
 fun ExerciseEntity.toDto() =
-    ExerciseDto(id, name, muscleGroup.name, equipment.name, description, isCustom, instructions, imagePath)
+    ExerciseDto(id, name, muscleGroup.name, equipment.name, description, isCustom, instructions, imagePath, imageUrl)
 fun ExerciseDto.toEntity() = ExerciseEntity(
     id = id,
     name = name,
@@ -102,6 +103,7 @@ fun ExerciseDto.toEntity() = ExerciseEntity(
     isCustom = isCustom,
     instructions = instructions,
     imagePath = imagePath,
+    imageUrl = imageUrl,
 )
 
 fun RoutineEntity.toDto() = RoutineDto(id, name, split.name, description, position, createdAt)

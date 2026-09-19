@@ -110,32 +110,59 @@ fun ExerciseDetailScreen(
             GlassCard {
                 SectionTitle(stringResource(R.string.reference_image_title), accent = Cyan)
                 Spacer(Modifier.height(12.dp))
-                val imagePath = exercise?.imagePath
-                if (imagePath != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context).data(File(imagePath)).build(),
-                        imageLoader = imageLoader,
-                        contentDescription = stringResource(R.string.reference_image_cd),
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.reference_image_replace), color = Cyan)
-                        }
-                        TextButton(onClick = viewModel::removeImage) {
-                            Text(stringResource(R.string.action_delete), color = TextMuted)
+                val userImagePath = exercise?.imagePath
+                val demoUrl = exercise?.imageUrl
+                when {
+                    userImagePath != null -> {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(File(userImagePath)).build(),
+                            imageLoader = imageLoader,
+                            contentDescription = stringResource(R.string.reference_image_cd),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.reference_image_replace), color = Cyan)
+                            }
+                            TextButton(onClick = viewModel::removeImage) {
+                                Text(stringResource(R.string.action_delete), color = TextMuted)
+                            }
                         }
                     }
-                } else {
-                    Text(stringResource(R.string.reference_image_hint), color = TextMuted)
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.reference_image_add), color = Gold)
+                    demoUrl != null -> {
+                        // Public-domain demo image, loaded on demand and cached by Coil.
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(demoUrl).crossfade(true).build(),
+                            imageLoader = imageLoader,
+                            contentDescription = stringResource(R.string.reference_image_cd),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.reference_image_demo_note),
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.reference_image_add), color = Gold)
+                        }
+                    }
+                    else -> {
+                        Text(stringResource(R.string.reference_image_hint), color = TextMuted)
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.reference_image_add), color = Gold)
+                        }
                     }
                 }
             }

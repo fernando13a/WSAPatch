@@ -117,6 +117,7 @@
     <string name="reference_image_hint">Adjunta tu propia foto o GIF para recordar la técnica o el equipo. Se guarda en tu dispositivo.</string>
     <string name="reference_image_add">Añadir imagen</string>
     <string name="reference_image_replace">Cambiar imagen</string>
+    <string name="reference_image_demo_note">Imagen de demostración (dominio público). Se descarga una vez y queda en caché. Puedes reemplazarla por la tuya.</string>
 
     <!-- Model download -->
     <string name="model_title">Modelo de IA</string>

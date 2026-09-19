@@ -14,6 +14,8 @@ data class Exercise(
     val isCustom: Boolean = true,
     /** Step-by-step technique cues (how to perform it). */
     val instructions: String? = null,
-    /** Absolute path to a user-attached reference image on this device, if any. */
+    /** Absolute path to a user-attached reference image on this device, if any (takes priority). */
     val imagePath: String? = null,
+    /** Optional public demo-image URL (loaded on demand and cached). */
+    val imageUrl: String? = null,
 )

@@ -116,6 +116,7 @@
     <string name="reference_image_hint">Attach your own photo or GIF to remember the technique or equipment. It stays on your device.</string>
     <string name="reference_image_add">Add image</string>
     <string name="reference_image_replace">Replace image</string>
+    <string name="reference_image_demo_note">Demo image (public domain). Downloaded once, then cached. You can replace it with your own.</string>
 
     <!-- Model download -->
     <string name="model_title">AI model</string>

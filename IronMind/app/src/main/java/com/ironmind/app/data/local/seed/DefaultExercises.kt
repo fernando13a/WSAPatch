@@ -54,6 +54,7 @@ object DefaultExercises {
         val muscleGroup: String,
         val equipment: String,
         val instructions: String = "",
+        val imageUrl: String? = null,
     )
 
     private fun CatalogExerciseDto.toEntity(): ExerciseEntity = ExerciseEntity(
@@ -62,6 +63,7 @@ object DefaultExercises {
         equipment = runCatching { enumValueOf<Equipment>(equipment) }.getOrDefault(Equipment.OTHER),
         isCustom = false,
         instructions = instructions.ifBlank { null },
+        imageUrl = imageUrl,
     )
 
     private suspend fun seedRoutines(dao: WorkoutDao) {

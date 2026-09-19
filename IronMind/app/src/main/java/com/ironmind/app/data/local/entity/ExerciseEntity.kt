@@ -20,6 +20,8 @@ data class ExerciseEntity(
     val isCustom: Boolean = true,
     /** Step-by-step technique cues shown on the exercise detail screen (offline). */
     val instructions: String? = null,
-    /** Absolute path to a user-attached reference image on this device, if any. */
+    /** Absolute path to a user-attached reference image on this device, if any (takes priority). */
     val imagePath: String? = null,
+    /** Optional public demo-image URL (loaded on demand and cached); null for user-only exercises. */
+    val imageUrl: String? = null,
 )
