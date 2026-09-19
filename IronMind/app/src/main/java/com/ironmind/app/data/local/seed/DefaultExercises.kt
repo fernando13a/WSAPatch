@@ -1,5 +1,6 @@
 package com.ironmind.app.data.local.seed
 
+import android.content.Context
 import com.ironmind.app.data.local.dao.WorkoutDao
 import com.ironmind.app.data.local.entity.ExerciseEntity
 import com.ironmind.app.data.local.entity.RoutineEntity
@@ -7,19 +8,61 @@ import com.ironmind.app.data.local.entity.RoutineExerciseCrossRef
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineSplit
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 /**
  * Ships a starter catalog of common exercises and a few Push/Pull/Legs routines so the app is
  * useful on first launch while remaining 100% offline. Seeded rows are marked `isCustom = false`.
+ *
+ * On top of the ~23 hand-written (Spanish) exercises used by the starter routines, it also imports
+ * a large public-domain catalog (free-exercise-db, The Unlicense — English how-to text) bundled as
+ * an asset, skipping any name already present so the curated Spanish guides win.
  */
 object DefaultExercises {
 
+    private val json = Json { ignoreUnknownKeys = true }
+    private const val CATALOG_ASSET = "exercises_catalog.json"
+
     /** Inserts the starter catalog and routines if the exercises table is empty. */
-    suspend fun seed(dao: WorkoutDao) {
+    suspend fun seed(dao: WorkoutDao, context: Context) {
         if (dao.countExercises() > 0) return
         dao.upsertExercises(catalog)
         seedRoutines(dao)
+        seedBundledCatalog(dao, context)
     }
+
+    /** Imports the bundled public-domain exercise catalog (best-effort; never breaks first launch). */
+    private suspend fun seedBundledCatalog(dao: WorkoutDao, context: Context) {
+        runCatching {
+            val text = context.assets.open(CATALOG_ASSET).bufferedReader().use { it.readText() }
+            val curatedNames = catalog.mapTo(mutableSetOf()) { it.name.lowercase() }
+            val extras = json
+                .decodeFromString(ListSerializer(CatalogExerciseDto.serializer()), text)
+                .asSequence()
+                .filter { it.name.lowercase() !in curatedNames }
+                .map { it.toEntity() }
+                .toList()
+            if (extras.isNotEmpty()) dao.upsertExercises(extras)
+        }
+    }
+
+    @Serializable
+    private data class CatalogExerciseDto(
+        val name: String,
+        val muscleGroup: String,
+        val equipment: String,
+        val instructions: String = "",
+    )
+
+    private fun CatalogExerciseDto.toEntity(): ExerciseEntity = ExerciseEntity(
+        name = name,
+        muscleGroup = runCatching { enumValueOf<MuscleGroup>(muscleGroup) }.getOrDefault(MuscleGroup.OTHER),
+        equipment = runCatching { enumValueOf<Equipment>(equipment) }.getOrDefault(Equipment.OTHER),
+        isCustom = false,
+        instructions = instructions.ifBlank { null },
+    )
 
     private suspend fun seedRoutines(dao: WorkoutDao) {
         val idByName = dao.getAllExercisesOnce().associate { it.name to it.id }
