@@ -1,9 +1,8 @@
 package com.ironmind.app.ui.exercise
 
-import android.graphics.BitmapFactory
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,17 +28,21 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
 import com.ironmind.app.R
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
@@ -48,8 +51,7 @@ import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
 import com.ironmind.app.ui.theme.TextMuted
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,19 +60,24 @@ fun ExerciseDetailScreen(
     viewModel: ExerciseDetailViewModel = hiltViewModel(),
 ) {
     val exercise by viewModel.exercise.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Coil image loader with GIF/animated-WebP support, so an attached GIF actually plays.
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::attachImage) }
-
-    val imagePath = exercise?.imagePath
-    val referenceImage by produceState<ImageBitmap?>(initialValue = null, imagePath) {
-        value = imagePath?.let { path ->
-            withContext(Dispatchers.IO) {
-                runCatching { BitmapFactory.decodeFile(path)?.asImageBitmap() }.getOrNull()
-            }
-        }
-    }
 
     Scaffold(
         containerColor = Black,
@@ -103,16 +110,17 @@ fun ExerciseDetailScreen(
             GlassCard {
                 SectionTitle(stringResource(R.string.reference_image_title), accent = Cyan)
                 Spacer(Modifier.height(12.dp))
-                val bitmap = referenceImage
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap,
+                val imagePath = exercise?.imagePath
+                if (imagePath != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(File(imagePath)).build(),
+                        imageLoader = imageLoader,
                         contentDescription = stringResource(R.string.reference_image_cd),
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(220.dp)
                             .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Fit,
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

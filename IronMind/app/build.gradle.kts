@@ -94,6 +94,10 @@ dependencies {
     // Serialization (JSON data backup / export)
     implementation(libs.kotlinx.serialization.json)
 
+    // Image loading with animated GIF / WebP support (exercise reference media)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+
     // On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — Stage 2.
     implementation(libs.mediapipe.tasks.genai)
 
