@@ -15,11 +15,12 @@ object AiConstants {
     const val MODEL_SUBDIR = "models"
 
     /**
-     * Optional default download URL for the model. Leave blank and let the user paste one, or set
-     * a direct-download URL to a MediaPipe-compatible model here. Downloading uses the network once;
-     * inference afterwards is fully offline.
+     * Default download URL for the model — a public, direct-download link to a MediaPipe-compatible
+     * `.task` (here, Gemma 3 1B int4 hosted as a GitHub Release asset). Downloading uses the network
+     * once; inference afterwards is fully offline. Leave blank to require the user to paste one.
      */
-    const val DEFAULT_MODEL_URL = ""
+    const val DEFAULT_MODEL_URL =
+        "https://github.com/fernando13a/WSAPatch/releases/download/model-gemma3-1b/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task"
 
     // Inference / sampling parameters.
     const val MAX_TOKENS = 1024

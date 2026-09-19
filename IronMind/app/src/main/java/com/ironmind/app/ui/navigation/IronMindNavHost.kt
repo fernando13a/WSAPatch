@@ -68,7 +68,7 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                     onEditRoutine = { routineId ->
                         navController.navigate(Destinations.routineEdit(routineId))
                     },
-                    onDownloadModel = { navController.navigate(Destinations.MODEL_ROUTE) },
+                    onDownloadModel = { navController.navigate(Destinations.model(autostart = true)) },
                     onOpenBackup = { navController.navigate(Destinations.BACKUP_ROUTE) },
                 )
             }
@@ -111,7 +111,12 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                 )
             }
 
-            composable(Destinations.MODEL_ROUTE) {
+            composable(
+                route = Destinations.MODEL_ROUTE,
+                arguments = listOf(
+                    navArgument(Destinations.ARG_AUTOSTART) { type = NavType.BoolType; defaultValue = false },
+                ),
+            ) {
                 ModelDownloadScreen(onBack = { navController.popBackStack() })
             }
 
