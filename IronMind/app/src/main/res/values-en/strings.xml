@@ -261,4 +261,21 @@
     <string name="split_core">Core</string>
     <string name="split_cardio">Cardio</string>
     <string name="split_custom">Custom</string>
+
+    <!-- Conversational coach (chat) -->
+    <string name="nav_coach">Coach</string>
+    <string name="chat_title">AI Coach</string>
+    <string name="chat_clear">New conversation</string>
+    <string name="chat_input_hint">Ask your coach…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_stop">Stop</string>
+    <string name="chat_thinking">Thinking…</string>
+    <string name="chat_author_you">YOU</string>
+    <string name="chat_author_coach">COACH</string>
+    <string name="chat_empty_title">Ask me anything about your training</string>
+    <string name="chat_empty_body">I answer from your real sets, your streak and your estimated 1RMs — all processed on your device, no internet.</string>
+    <string name="chat_suggestion_week">How am I doing this week?</string>
+    <string name="chat_suggestion_today">What should I train today?</string>
+    <string name="chat_suggestion_plateau">How do I break my plateau?</string>
+    <string name="chat_suggestion_technique">Give me a technique tip</string>
 </resources>

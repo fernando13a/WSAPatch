@@ -3,6 +3,7 @@ package com.ironmind.app.ui.navigation
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
@@ -24,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ironmind.app.R
 import com.ironmind.app.ui.backup.BackupScreen
+import com.ironmind.app.ui.chat.ChatScreen
 import com.ironmind.app.ui.dashboard.DashboardScreen
 import com.ironmind.app.ui.exercise.ExerciseDetailScreen
 import com.ironmind.app.ui.model.ModelDownloadScreen
@@ -41,7 +43,9 @@ import com.ironmind.app.ui.theme.TextMuted
 fun IronMindNavHost(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute == Destinations.DASHBOARD || currentRoute == Destinations.PROGRESS_ROUTE
+    val showBottomBar = currentRoute == Destinations.DASHBOARD ||
+        currentRoute == Destinations.CHAT_ROUTE ||
+        currentRoute == Destinations.PROGRESS_ROUTE
 
     Scaffold(
         containerColor = Black,
@@ -72,6 +76,12 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                     },
                     onDownloadModel = { navController.navigate(Destinations.model(autostart = true)) },
                     onOpenBackup = { navController.navigate(Destinations.BACKUP_ROUTE) },
+                )
+            }
+
+            composable(Destinations.CHAT_ROUTE) {
+                ChatScreen(
+                    onDownloadModel = { navController.navigate(Destinations.model(autostart = true)) },
                 )
             }
 
@@ -174,6 +184,13 @@ private fun IronMindBottomBar(navController: NavHostController, currentRoute: St
             onClick = { navigateTab(Destinations.DASHBOARD) },
             icon = { Icon(Icons.Filled.Home, contentDescription = stringResource(R.string.nav_home)) },
             label = { Text(stringResource(R.string.nav_home)) },
+            colors = itemColors,
+        )
+        NavigationBarItem(
+            selected = currentRoute == Destinations.CHAT_ROUTE,
+            onClick = { navigateTab(Destinations.CHAT_ROUTE) },
+            icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(R.string.nav_coach)) },
+            label = { Text(stringResource(R.string.nav_coach)) },
             colors = itemColors,
         )
         NavigationBarItem(

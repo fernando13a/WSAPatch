@@ -4,6 +4,7 @@ package com.ironmind.app.ui.navigation
 object Destinations {
 
     const val DASHBOARD = "dashboard"
+    const val CHAT_ROUTE = "chat"
 
     const val ARG_SESSION_ID = "sessionId"
     const val ARG_ROUTINE_ID = "routineId"

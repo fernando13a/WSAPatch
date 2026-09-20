@@ -266,4 +266,21 @@
     <string name="split_core">Core</string>
     <string name="split_cardio">Cardio</string>
     <string name="split_custom">Personalizada</string>
+
+    <!-- Conversational coach (chat) -->
+    <string name="nav_coach">Coach</string>
+    <string name="chat_title">Coach IA</string>
+    <string name="chat_clear">Nueva conversación</string>
+    <string name="chat_input_hint">Pregúntale a tu coach…</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_stop">Detener</string>
+    <string name="chat_thinking">Pensando…</string>
+    <string name="chat_author_you">TÚ</string>
+    <string name="chat_author_coach">COACH</string>
+    <string name="chat_empty_title">Pregúntame lo que quieras de tu entrenamiento</string>
+    <string name="chat_empty_body">Respondo con tus sets reales, tu racha y tus 1RM estimados — todo se procesa en tu dispositivo, sin internet.</string>
+    <string name="chat_suggestion_week">¿Cómo voy esta semana?</string>
+    <string name="chat_suggestion_today">¿Qué debería entrenar hoy?</string>
+    <string name="chat_suggestion_plateau">¿Cómo rompo mi estancamiento?</string>
+    <string name="chat_suggestion_technique">Dame un consejo de técnica</string>
 </resources>
