@@ -49,8 +49,8 @@ class RoutineEditViewModelTest {
         assertTrue(done)
         assertEquals(1, repo.upsertedRoutines.size)
         assertEquals("Push", repo.upsertedRoutines.first().name)
-        assertEquals(listOf(ohp.id, bench.id), repo.addedToRoutine.map { it.second })
-        assertEquals(listOf(0, 1), repo.addedToRoutine.map { it.third })
+        assertEquals(listOf(ohp.id, bench.id), repo.addedToRoutine.map { it.exerciseId })
+        assertEquals(listOf(0, 1), repo.addedToRoutine.map { it.position })
     }
 
     @Test

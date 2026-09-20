@@ -12,6 +12,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
+/** Full arguments of one [WorkoutRepository.addExerciseToRoutine] call, recorded for assertions. */
+data class AddedToRoutineCall(
+    val routineId: Long,
+    val exerciseId: Long,
+    val position: Int,
+    val targetSets: Int,
+    val targetReps: Int,
+    val targetRestSeconds: Int,
+)
+
 /**
  * In-memory, controllable fake of [WorkoutRepository]. Observable reads are backed by
  * [MutableStateFlow]s the test can set; writes are recorded for assertions.
@@ -44,7 +54,7 @@ class FakeWorkoutRepository : WorkoutRepository {
     val deletedSetLogs = mutableListOf<SetLog>()
     val upsertedRoutines = mutableListOf<Routine>()
     val upsertedExercises = mutableListOf<Exercise>()
-    val addedToRoutine = mutableListOf<Triple<Long, Long, Int>>() // routineId, exerciseId, position
+    val addedToRoutine = mutableListOf<AddedToRoutineCall>()
     val removedFromRoutine = mutableListOf<Pair<Long, Long>>()
 
     /** Controllable return value for [getAlternatives], keyed by the exerciseId asked for. */
@@ -94,7 +104,7 @@ class FakeWorkoutRepository : WorkoutRepository {
         targetReps: Int,
         targetRestSeconds: Int,
     ) {
-        addedToRoutine += Triple(routineId, exerciseId, position)
+        addedToRoutine += AddedToRoutineCall(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds)
     }
     override suspend fun removeExerciseFromRoutine(routineId: Long, exerciseId: Long) {
         removedFromRoutine += (routineId to exerciseId)

@@ -7,6 +7,7 @@ import com.ironmind.app.R
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineSplit
+import com.ironmind.app.domain.model.TrainingGoal
 
 /**
  * Localized display labels for the domain taxonomy. The enums stay English (they are the stable,
@@ -68,3 +69,13 @@ fun RoutineSplit.labelRes(): Int = when (this) {
 
 @Composable
 fun RoutineSplit.label(): String = stringResource(labelRes())
+
+@StringRes
+fun TrainingGoal.labelRes(): Int = when (this) {
+    TrainingGoal.STRENGTH -> R.string.goal_strength
+    TrainingGoal.HYPERTROPHY -> R.string.goal_hypertrophy
+    TrainingGoal.ENDURANCE -> R.string.goal_endurance
+}
+
+@Composable
+fun TrainingGoal.label(): String = stringResource(labelRes())

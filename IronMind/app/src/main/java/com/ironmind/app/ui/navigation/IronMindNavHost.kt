@@ -29,6 +29,7 @@ import com.ironmind.app.ui.exercise.ExerciseDetailScreen
 import com.ironmind.app.ui.model.ModelDownloadScreen
 import com.ironmind.app.ui.progress.ProgressScreen
 import com.ironmind.app.ui.routineedit.RoutineEditScreen
+import com.ironmind.app.ui.routinegenerator.RoutineGeneratorScreen
 import com.ironmind.app.ui.session.SessionScreen
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
@@ -65,6 +66,7 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                         navController.navigate(Destinations.progress(exerciseId))
                     },
                     onNewRoutine = { navController.navigate(Destinations.routineEdit()) },
+                    onGenerateRoutine = { navController.navigate(Destinations.ROUTINE_GENERATOR_ROUTE) },
                     onEditRoutine = { routineId ->
                         navController.navigate(Destinations.routineEdit(routineId))
                     },
@@ -135,6 +137,13 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                     onOpenExercise = { exerciseId ->
                         navController.navigate(Destinations.exerciseDetail(exerciseId))
                     },
+                )
+            }
+
+            composable(Destinations.ROUTINE_GENERATOR_ROUTE) {
+                RoutineGeneratorScreen(
+                    onBack = { navController.popBackStack() },
+                    onRoutineSaved = { navController.popBackStack() },
                 )
             }
         }

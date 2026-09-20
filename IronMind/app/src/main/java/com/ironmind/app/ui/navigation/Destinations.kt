@@ -16,6 +16,7 @@ object Destinations {
     const val MODEL_ROUTE = "model?$ARG_AUTOSTART={$ARG_AUTOSTART}"
     const val BACKUP_ROUTE = "backup"
     const val EXERCISE_DETAIL_ROUTE = "exerciseDetail?$ARG_EXERCISE_ID={$ARG_EXERCISE_ID}"
+    const val ROUTINE_GENERATOR_ROUTE = "routineGenerator"
 
     /** Builds a session route. sessionId=0 means "start a new session" (optionally from routineId). */
     fun session(sessionId: Long = 0L, routineId: Long = 0L): String =

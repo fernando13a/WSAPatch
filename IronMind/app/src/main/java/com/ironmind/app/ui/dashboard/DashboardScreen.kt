@@ -61,6 +61,7 @@ fun DashboardScreen(
     onStartSession: (routineId: Long) -> Unit,
     onOpenProgress: (exerciseId: Long) -> Unit,
     onNewRoutine: () -> Unit,
+    onGenerateRoutine: () -> Unit,
     onEditRoutine: (routineId: Long) -> Unit,
     onDownloadModel: () -> Unit,
     onOpenBackup: () -> Unit,
@@ -134,7 +135,10 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SectionTitle(stringResource(R.string.routines_title))
-                    TextButton(onClick = onNewRoutine) { Text(stringResource(R.string.routines_new), color = Cyan) }
+                    Row {
+                        TextButton(onClick = onGenerateRoutine) { Text(stringResource(R.string.routines_generate), color = Gold) }
+                        TextButton(onClick = onNewRoutine) { Text(stringResource(R.string.routines_new), color = Cyan) }
+                    }
                 }
             }
 
