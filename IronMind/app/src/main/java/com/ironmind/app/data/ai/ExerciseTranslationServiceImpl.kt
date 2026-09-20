@@ -5,12 +5,13 @@ import com.ironmind.app.domain.ai.ExerciseVocabulary
 import com.ironmind.app.domain.ai.LlmInferenceService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 /**
  * Implementation of ExerciseTranslationService.
  * Uses vocabulary for composed translations; falls back to Gemma for complex names.
  */
-class ExerciseTranslationServiceImpl(
+class ExerciseTranslationServiceImpl @Inject constructor(
     private val llmService: LlmInferenceService,
 ) : ExerciseTranslationService {
 
