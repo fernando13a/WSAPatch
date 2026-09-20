@@ -2,8 +2,10 @@ package com.ironmind.app.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.ironmind.app.FakeAppPreferences
@@ -106,7 +108,9 @@ class DashboardScreenTest {
     fun displaysStartFreeSessionButton() {
         setDashboard()
 
-        composeTestRule.onNodeWithText(context.getString(R.string.start_free_session)).performScrollTo().assertIsDisplayed()
+        val buttonText = context.getString(R.string.start_free_session)
+        composeTestRule.onNodeWithTag("dashboardList").performScrollToNode(hasText(buttonText))
+        composeTestRule.onNodeWithText(buttonText).assertIsDisplayed()
     }
 
     @Test
@@ -124,6 +128,7 @@ class DashboardScreenTest {
 
         setDashboard(repo)
 
-        composeTestRule.onNodeWithText("Push Day").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("dashboardList").performScrollToNode(hasText("Push Day"))
+        composeTestRule.onNodeWithText("Push Day").assertIsDisplayed()
     }
 }
