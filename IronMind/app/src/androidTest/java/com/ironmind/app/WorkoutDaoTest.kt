@@ -107,6 +107,48 @@ class WorkoutDaoTest {
     }
 
     @Test
+    fun getSetLogsSince_excludesEntriesBeforeTheCutoff() = runTest {
+        val sessionId = dao.insertSession(WorkoutSessionEntity(startedAt = 1_000L))
+        val squatId = dao.upsertExercise(
+            ExerciseEntity(name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL),
+        )
+        dao.upsertSetLog(
+            SetLogEntity(sessionId = sessionId, exerciseId = squatId, setNumber = 1, weightKg = 100.0, reps = 5, performedAt = 1_000L),
+        )
+        dao.upsertSetLog(
+            SetLogEntity(sessionId = sessionId, exerciseId = squatId, setNumber = 2, weightKg = 100.0, reps = 5, performedAt = 5_000L),
+        )
+        dao.upsertSetLog(
+            SetLogEntity(sessionId = sessionId, exerciseId = squatId, setNumber = 3, weightKg = 105.0, reps = 5, performedAt = 9_000L),
+        )
+
+        val recent = dao.getSetLogsSince(5_000L)
+
+        assertEquals(setOf(5_000L, 9_000L), recent.map { it.performedAt }.toSet())
+    }
+
+    @Test
+    fun getSetLogsSince_spansMultipleExercises() = runTest {
+        val sessionId = dao.insertSession(WorkoutSessionEntity(startedAt = 1_000L))
+        val squatId = dao.upsertExercise(
+            ExerciseEntity(name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL),
+        )
+        val benchId = dao.upsertExercise(
+            ExerciseEntity(name = "Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL),
+        )
+        dao.upsertSetLog(
+            SetLogEntity(sessionId = sessionId, exerciseId = squatId, setNumber = 1, weightKg = 100.0, reps = 5, performedAt = 2_000L),
+        )
+        dao.upsertSetLog(
+            SetLogEntity(sessionId = sessionId, exerciseId = benchId, setNumber = 1, weightKg = 60.0, reps = 8, performedAt = 3_000L),
+        )
+
+        val recent = dao.getSetLogsSince(1_000L)
+
+        assertEquals(setOf(squatId, benchId), recent.map { it.exerciseId }.toSet())
+    }
+
+    @Test
     fun deletingSession_cascadesToSetLogs() = runTest {
         val sessionId = dao.insertSession(WorkoutSessionEntity(startedAt = 2_000L))
         val curlId = dao.upsertExercise(

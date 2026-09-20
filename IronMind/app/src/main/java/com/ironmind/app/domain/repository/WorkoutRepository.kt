@@ -67,6 +67,12 @@ interface WorkoutRepository {
     suspend fun getLastSetLogForExercise(exerciseId: Long): SetLog?
     /** The most recent [limit] set logs for an exercise (newest first) — the AI history window. */
     suspend fun getRecentSetLogs(exerciseId: Long, limit: Int): List<SetLog>
+
+    /**
+     * All sets logged at or after [sinceTimestamp] (epoch millis), across every exercise —
+     * the cross-exercise activity window AI insights/recovery features aggregate over.
+     */
+    suspend fun getRecentActivity(sinceTimestamp: Long): List<SetLog>
     suspend fun upsertSetLog(setLog: SetLog): Long
     suspend fun deleteSetLog(setLog: SetLog)
 }

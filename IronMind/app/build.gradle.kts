@@ -84,6 +84,15 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Exposes the exported Room schema history (see the `ksp { }` block below) to instrumented
+    // tests as assets, so MigrationTestHelper can load a past version's schema and replay real
+    // migrations against it instead of only ever testing against the latest schema.
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
 }
 
 // Room schema export — keeps a versioned history of the DB for migrations & tests.

@@ -37,5 +37,18 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    /**
+     * v5: index on `set_logs.performedAt`. Backs the "activity since a given timestamp" query
+     * used by the on-device AI insights/recovery features (cross-exercise aggregation), which
+     * would otherwise force a full table scan of `set_logs` as history grows. Index name matches
+     * Room's default convention (`index_<table>_<column>`) so it lines up with the `@Entity`
+     * schema Room now expects from `SetLogEntity`.
+     */
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_set_logs_performedAt ON set_logs(performedAt)")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 }

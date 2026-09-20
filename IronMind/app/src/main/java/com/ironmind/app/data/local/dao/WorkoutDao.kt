@@ -141,6 +141,14 @@ interface WorkoutDao {
     @Query("SELECT * FROM set_logs WHERE exerciseId = :exerciseId ORDER BY performedAt DESC LIMIT :limit")
     suspend fun getRecentSetLogsForExercise(exerciseId: Long, limit: Int): List<SetLogEntity>
 
+    /**
+     * All sets logged at or after [sinceMillis], across every exercise — the cross-exercise
+     * window AI features (trend insights, recovery advice) aggregate over. Backed by the
+     * `performedAt` index (see v5 migration) so this stays cheap as history grows.
+     */
+    @Query("SELECT * FROM set_logs WHERE performedAt >= :sinceMillis ORDER BY performedAt DESC")
+    suspend fun getSetLogsSince(sinceMillis: Long): List<SetLogEntity>
+
     @Upsert
     suspend fun upsertSetLog(setLog: SetLogEntity): Long
 

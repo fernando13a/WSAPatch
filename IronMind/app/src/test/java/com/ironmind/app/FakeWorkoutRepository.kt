@@ -30,6 +30,7 @@ class FakeWorkoutRepository : WorkoutRepository {
 
     // Direct-return state.
     var recentSetLogs: List<SetLog> = emptyList()
+    var recentActivity: List<SetLog> = emptyList()
     var routineToReturn: Routine? = null
     var sessionToReturn: WorkoutSession? = null
     var newSessionId: Long = 7L
@@ -116,6 +117,7 @@ class FakeWorkoutRepository : WorkoutRepository {
     override fun observeSetLogsForExercise(exerciseId: Long): Flow<List<SetLog>> = setLogsForExerciseFlow
     override suspend fun getLastSetLogForExercise(exerciseId: Long): SetLog? = recentSetLogs.firstOrNull()
     override suspend fun getRecentSetLogs(exerciseId: Long, limit: Int): List<SetLog> = recentSetLogs
+    override suspend fun getRecentActivity(sinceTimestamp: Long): List<SetLog> = recentActivity
     override suspend fun upsertSetLog(setLog: SetLog): Long {
         upsertedSetLogs += setLog
         return if (setLog.id == 0L) 1L else setLog.id
