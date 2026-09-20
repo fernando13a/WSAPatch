@@ -8,6 +8,7 @@ import com.ironmind.app.data.local.Migrations
 import com.ironmind.app.data.local.entity.ExerciseEntity
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.MuscleGroup
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before

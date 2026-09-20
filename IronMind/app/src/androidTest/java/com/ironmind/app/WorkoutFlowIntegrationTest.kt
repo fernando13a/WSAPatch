@@ -66,7 +66,7 @@ class WorkoutFlowIntegrationTest {
         // 2. Start a session
         val session = WorkoutSessionEntity(
             title = "Chest Day",
-            startedAt = Instant.now(),
+            startedAt = Instant.now().toEpochMilli(),
         )
         val sessionId = dao.insertSession(session)
 
@@ -90,7 +90,7 @@ class WorkoutFlowIntegrationTest {
         dao.upsertSetLog(set2)
 
         // 4. Finish session
-        val endedSession = session.copy(id = sessionId, endedAt = Instant.now())
+        val endedSession = session.copy(id = sessionId, endedAt = Instant.now().toEpochMilli())
         dao.updateSession(endedSession)
 
         // 5. Verify data persistence
@@ -129,7 +129,7 @@ class WorkoutFlowIntegrationTest {
         // Start session
         val session = WorkoutSessionEntity(
             title = "Full Body",
-            startedAt = Instant.now(),
+            startedAt = Instant.now().toEpochMilli(),
         )
         val sessionId = dao.insertSession(session)
 

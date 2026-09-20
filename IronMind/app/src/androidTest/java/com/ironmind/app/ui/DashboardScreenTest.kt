@@ -4,18 +4,32 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ironmind.app.domain.model.Exercise
+import androidx.test.platform.app.InstrumentationRegistry
+import com.ironmind.app.FakeAppPreferences
+import com.ironmind.app.FakeLlmInferenceService
+import com.ironmind.app.FakeWorkoutRepository
+import com.ironmind.app.R
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.MuscleGroup
-import com.ironmind.app.ui.dashboard.DashboardUiState
+import com.ironmind.app.domain.model.Routine
+import com.ironmind.app.domain.model.RoutinePlan
+import com.ironmind.app.domain.model.RoutineSplit
+import com.ironmind.app.domain.model.SessionDetail
+import com.ironmind.app.domain.model.WorkoutSession
+import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.usecase.GetProgressionSuggestionUseCase
+import com.ironmind.app.domain.usecase.GetTrainingInsightsUseCase
 import com.ironmind.app.ui.dashboard.DashboardScreen
+import com.ironmind.app.ui.dashboard.DashboardViewModel
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.TimeUnit
 
 /**
- * UI tests for DashboardScreen.
- * Verifies the dashboard displays core elements: header, AI coach panel, routines, and streak.
+ * UI tests for DashboardScreen. [DashboardScreen] takes a real [DashboardViewModel] (defaulting
+ * to `hiltViewModel()`), so tests build one directly from the shared fakes in `src/testShared`,
+ * the same pattern [SessionScreenTest] uses.
  */
 @RunWith(AndroidJUnit4::class)
 class DashboardScreenTest {
@@ -23,76 +37,65 @@ class DashboardScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    @Test
-    fun displaysHeaderAndCoachTitle() {
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    private fun viewModel(repo: FakeWorkoutRepository = FakeWorkoutRepository()): DashboardViewModel {
+        val llm = FakeLlmInferenceService()
+        return DashboardViewModel(
+            repo,
+            GetProgressionSuggestionUseCase(repo, llm),
+            GetTrainingInsightsUseCase(repo, llm),
+            llm,
+            FakeAppPreferences(),
+        )
+    }
+
+    private fun setDashboard(repo: FakeWorkoutRepository = FakeWorkoutRepository()) {
         composeTestRule.setContent {
             DashboardScreen(
-                state = DashboardUiState.Ready(
-                    exercises = emptyList(),
-                    streak = 0,
-                    sessionsThisWeek = 0,
-                    routines = emptyList(),
-                    suggestion = null,
-                    modelReady = true,
-                ),
-                onNavigateToSession = {},
-                onNavigateToRoutineEdit = { _, _ -> },
-                onNavigateToProgress = {},
-                onNavigateToModel = {},
-                onNavigateToBackup = {},
-                onNavigateToRoutine = {},
+                onStartSession = {},
+                onOpenProgress = {},
+                onNewRoutine = {},
+                onGenerateRoutine = {},
+                onEditRoutine = {},
+                onDownloadModel = {},
+                onOpenBackup = {},
+                viewModel = viewModel(repo),
             )
         }
+    }
 
-        composeTestRule.onNodeWithText("NEURAL STRENGTH ENGINE").assertIsDisplayed()
+    @Test
+    fun displaysHeaderAndCoachTitle() {
+        setDashboard()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.dash_engine_label)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.ai_coach_title)).assertIsDisplayed()
     }
 
     @Test
     fun displaysStreakWhenGreaterThanZero() {
-        composeTestRule.setContent {
-            DashboardScreen(
-                state = DashboardUiState.Ready(
-                    exercises = emptyList(),
-                    streak = 7,
-                    sessionsThisWeek = 3,
-                    routines = emptyList(),
-                    suggestion = null,
-                    modelReady = true,
-                ),
-                onNavigateToSession = {},
-                onNavigateToRoutineEdit = { _, _ -> },
-                onNavigateToProgress = {},
-                onNavigateToModel = {},
-                onNavigateToBackup = {},
-                onNavigateToRoutine = {},
-            )
+        val now = System.currentTimeMillis()
+        val dayMillis = TimeUnit.DAYS.toMillis(1)
+        val repo = FakeWorkoutRepository().apply {
+            sessionDetailsFlow.value = (0..2).map { daysAgo ->
+                SessionDetail(
+                    session = WorkoutSession(id = daysAgo.toLong() + 1, startedAt = now - daysAgo * dayMillis),
+                    sets = emptyList(),
+                )
+            }
         }
 
-        composeTestRule.onNodeWithText("7").assertIsDisplayed()
+        setDashboard(repo)
+
+        composeTestRule.onNodeWithText("3").assertIsDisplayed()
     }
 
     @Test
     fun displaysStartFreeSessionButton() {
-        composeTestRule.setContent {
-            DashboardScreen(
-                state = DashboardUiState.Ready(
-                    exercises = emptyList(),
-                    streak = 0,
-                    sessionsThisWeek = 0,
-                    routines = emptyList(),
-                    suggestion = null,
-                    modelReady = true,
-                ),
-                onNavigateToSession = {},
-                onNavigateToRoutineEdit = { _, _ -> },
-                onNavigateToProgress = {},
-                onNavigateToModel = {},
-                onNavigateToBackup = {},
-                onNavigateToRoutine = {},
-            )
-        }
+        setDashboard()
 
-        composeTestRule.onNodeWithText("Start free session").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.start_free_session)).assertIsDisplayed()
     }
 
     @Test
@@ -103,27 +106,13 @@ class DashboardScreenTest {
             muscleGroup = MuscleGroup.CHEST,
             equipment = Equipment.BARBELL,
         )
-
-        composeTestRule.setContent {
-            DashboardScreen(
-                state = DashboardUiState.Ready(
-                    exercises = listOf(sampleExercise),
-                    streak = 0,
-                    sessionsThisWeek = 0,
-                    routines = emptyList(),
-                    suggestion = null,
-                    modelReady = true,
-                ),
-                onNavigateToSession = {},
-                onNavigateToRoutineEdit = { _, _ -> },
-                onNavigateToProgress = {},
-                onNavigateToModel = {},
-                onNavigateToBackup = {},
-                onNavigateToRoutine = {},
-            )
+        val routine = Routine(id = 1, name = "Push Day", split = RoutineSplit.PUSH)
+        val repo = FakeWorkoutRepository().apply {
+            routinePlansFlow.value = listOf(RoutinePlan(routine = routine, exercises = listOf(sampleExercise)))
         }
 
-        // Dashboard shows exercises in some form; adjust if needed
-        composeTestRule.onNodeWithText("Barbell Bench Press").assertIsDisplayed()
+        setDashboard(repo)
+
+        composeTestRule.onNodeWithText("Push Day").assertIsDisplayed()
     }
 }

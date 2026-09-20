@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.roborazzi)
 }
 
 // Optional release signing: drop a `keystore.properties` at the module root with
@@ -171,8 +170,4 @@ dependencies {
     // Compose UI testing
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // Snapshot testing with Roborazzi (visual regression detection)
-    androidTestImplementation(libs.roborazzi)
-    androidTestImplementation(libs.roborazzi.compose)
 }
