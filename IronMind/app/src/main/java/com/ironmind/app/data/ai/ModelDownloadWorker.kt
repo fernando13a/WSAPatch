@@ -9,6 +9,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.core.app.NotificationCompat
 import com.ironmind.app.R
+import com.ironmind.app.domain.model.ModelDownloadState
 import kotlinx.coroutines.flow.first
 
 /**
@@ -43,6 +44,8 @@ class ModelDownloadWorker(
                             false // Keep waiting
                         }
                         is ModelDownloadState.Error -> true // Stop on error
+                        ModelDownloadState.Idle -> false // Keep waiting
+                        ModelDownloadState.AwaitingMobileDataConfirmation -> true // Stop; caller must confirm
                     }
                 }
             Result.success()

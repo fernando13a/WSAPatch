@@ -32,7 +32,7 @@ class ExerciseTranslationServiceImpl(
                 Spanish:
             """.trimIndent()
 
-            llmService.callStreaming(prompt)
+            llmService.generateResponseStream(prompt)
                 .map { it.trim() }
                 .first { it.isNotEmpty() }
                 .takeIf { it.isNotEmpty() }
@@ -53,7 +53,7 @@ class ExerciseTranslationServiceImpl(
                 Spanish translation:
             """.trimIndent()
 
-            llmService.callStreaming(prompt)
+            llmService.generateResponseStream(prompt)
                 .map { it.trim() }
                 .first { it.isNotEmpty() }
                 .takeIf { it.isNotEmpty() }

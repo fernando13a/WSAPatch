@@ -228,7 +228,7 @@ private fun SessionPicker(
     onSelect: (Long) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = sessions.firstOrNull { it.id == selectedId }?.let(::sessionLabel)
+    val selectedLabel = sessions.firstOrNull { it.id == selectedId }?.let { session -> sessionLabel(session) }
         ?: stringResource(R.string.compare_sessions_pick)
 
     Column {

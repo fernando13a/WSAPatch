@@ -54,11 +54,7 @@ class RobustModelDownloadService @Inject constructor(
                     .putString(ModelDownloadWorker.PARAM_URL, url)
                     .build()
             )
-            .setBackoffCriteria(
-                backoffPolicy = BackoffPolicy.EXPONENTIAL,
-                initialDelay = 10,
-                initialDelayTimeUnit = TimeUnit.SECONDS,
-            )
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
