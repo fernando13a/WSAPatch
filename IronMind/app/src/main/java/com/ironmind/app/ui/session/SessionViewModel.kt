@@ -4,9 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ironmind.app.data.preferences.AppPreferences
+import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.SetLog
+import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
+import com.ironmind.app.domain.usecase.GetRecoveryAdviceUseCase
 import com.ironmind.app.notification.RestTimerNotifier
 import com.ironmind.app.ui.navigation.Destinations
 import com.ironmind.app.ui.util.displayName
@@ -29,6 +32,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SessionViewModel @Inject constructor(
     private val repository: WorkoutRepository,
+    private val getRecoveryAdvice: GetRecoveryAdviceUseCase,
     private val restNotifier: RestTimerNotifier,
     appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
@@ -181,6 +185,27 @@ class SessionViewModel @Inject constructor(
             }
             onDone()
         }
+    }
+
+    // ---- Recovery coach ---------------------------------------------------------------
+    private val _recoveryAdvice = MutableStateFlow<SuggestionState?>(null)
+    val recoveryAdvice: StateFlow<SuggestionState?> = _recoveryAdvice.asStateFlow()
+
+    private var recoveryJob: Job? = null
+
+    /** Streams AI recovery advice for [muscleGroup] into [recoveryAdvice]. */
+    fun generateRecoveryAdvice(muscleGroup: MuscleGroup) {
+        recoveryJob?.cancel()
+        recoveryJob = viewModelScope.launch {
+            getRecoveryAdvice(muscleGroup).collect { state -> _recoveryAdvice.value = state }
+        }
+    }
+
+    /** Clears any shown advice — called both on explicit dismiss and when the selected exercise
+     *  (and thus its muscle group) changes, so stale advice from a different group never lingers. */
+    fun dismissRecoveryAdvice() {
+        recoveryJob?.cancel()
+        _recoveryAdvice.value = null
     }
 
     override fun onCleared() {

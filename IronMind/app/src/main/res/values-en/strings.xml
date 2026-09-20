@@ -64,6 +64,10 @@
     <string name="rest_notif_done_title">Rest complete!</string>
     <string name="rest_notif_done_body">Tap to return to your session</string>
     <string name="add_set_title">Log set</string>
+    <string name="recovery_title">Recovery coach</string>
+    <string name="recovery_hint">Ready to train %1$s today? Ask the AI coach about your recovery.</string>
+    <string name="recovery_generate">Ask</string>
+    <string name="recovery_analyzing">Reviewing your recent history…</string>
     <string name="select_exercise">Select exercise</string>
     <string name="weight_kg">Weight (kg)</string>
     <string name="weight_input_label">Weight (%1$s)</string>

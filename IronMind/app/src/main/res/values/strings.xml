@@ -66,6 +66,10 @@
     <string name="rest_notif_done_title">¡Descanso terminado!</string>
     <string name="rest_notif_done_body">Toca para volver a tu sesión</string>
     <string name="add_set_title">Registrar set</string>
+    <string name="recovery_title">Coach de recuperación</string>
+    <string name="recovery_hint">¿Listo para entrenar %1$s hoy? Consulta al coach de IA sobre tu recuperación.</string>
+    <string name="recovery_generate">Consultar</string>
+    <string name="recovery_analyzing">Revisando tu historial reciente…</string>
     <string name="select_exercise">Selecciona ejercicio</string>
     <string name="weight_kg">Peso (kg)</string>
     <string name="weight_input_label">Peso (%1$s)</string>

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,7 +60,10 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
+import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.SetLog
+import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.model.WeightUnit
 import com.ironmind.app.domain.util.computePlatePlan
 import com.ironmind.app.domain.util.displayUnitToKg
@@ -70,6 +74,7 @@ import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
 import com.ironmind.app.ui.util.displayName
+import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.util.suffix
 import com.ironmind.app.ui.util.weightLabel
 import com.ironmind.app.ui.theme.Black
@@ -88,6 +93,18 @@ fun SessionScreen(
     val restRemaining by viewModel.restRemaining.collectAsStateWithLifecycle()
     val restTotal by viewModel.restTotal.collectAsStateWithLifecycle()
     val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
+    val recoveryAdvice by viewModel.recoveryAdvice.collectAsStateWithLifecycle()
+
+    // Hoisted so the Recovery Coach card (below AddSetCard) knows which muscle group is in focus.
+    var selectedExerciseId by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(state.availableExercises) {
+        if (selectedExerciseId == 0L) {
+            state.availableExercises.firstOrNull()?.let { selectedExerciseId = it.id }
+        }
+    }
+    val selectedMuscleGroup = state.availableExercises.firstOrNull { it.id == selectedExerciseId }?.muscleGroup
+    // Stale advice for a different muscle group should never linger once the selection changes.
+    LaunchedEffect(selectedMuscleGroup) { viewModel.dismissRecoveryAdvice() }
 
     // Keep the screen awake during a workout.
     val view = LocalView.current
@@ -172,12 +189,25 @@ fun SessionScreen(
 
             item {
                 AddSetCard(
-                    exercises = state.availableExercises.map { it.id to it.displayName() },
+                    exercises = state.availableExercises,
+                    selectedId = selectedExerciseId,
+                    onSelectedIdChange = { selectedExerciseId = it },
                     unit = weightUnit,
                     onAddSet = { exerciseId, weight, reps, notes ->
                         viewModel.addSet(exerciseId, weight, reps, notes)
                     },
                 )
+            }
+
+            if (selectedMuscleGroup != null) {
+                item {
+                    RecoveryCoachCard(
+                        muscleGroup = selectedMuscleGroup,
+                        advice = recoveryAdvice,
+                        onGenerate = { viewModel.generateRecoveryAdvice(selectedMuscleGroup) },
+                        onDismiss = viewModel::dismissRecoveryAdvice,
+                    )
+                }
             }
 
             item { SectionTitle(stringResource(R.string.session_exercises_title)) }
@@ -246,11 +276,12 @@ private fun RestTimerCard(
 
 @Composable
 private fun AddSetCard(
-    exercises: List<Pair<Long, String>>,
+    exercises: List<Exercise>,
+    selectedId: Long,
+    onSelectedIdChange: (Long) -> Unit,
     unit: WeightUnit,
     onAddSet: (exerciseId: Long, weightKg: Double, reps: Int, notes: String?) -> Unit,
 ) {
-    var selectedId by remember { mutableLongStateOf(0L) }
     var expanded by remember { mutableStateOf(false) }
     var weight by remember { mutableStateOf("") }
     var reps by remember { mutableStateOf("") }
@@ -258,11 +289,7 @@ private fun AddSetCard(
     var showPlates by remember { mutableStateOf(false) }
     var showPhotoWeight by remember { mutableStateOf(false) }
 
-    // Default the selector to the first available exercise once loaded.
-    LaunchedEffect(exercises) {
-        if (selectedId == 0L && exercises.isNotEmpty()) selectedId = exercises.first().first
-    }
-    val selectedName = exercises.firstOrNull { it.first == selectedId }?.second ?: stringResource(R.string.select_exercise)
+    val selectedName = exercises.firstOrNull { it.id == selectedId }?.displayName() ?: stringResource(R.string.select_exercise)
 
     GlassCard {
         SectionTitle(stringResource(R.string.add_set_title), accent = Gold)
@@ -273,9 +300,9 @@ private fun AddSetCard(
                 Text(selectedName, color = Cyan)
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                exercises.forEach { (id, name) ->
-                    DropdownMenuItem(text = { Text(name) }, onClick = {
-                        selectedId = id
+                exercises.forEach { exercise ->
+                    DropdownMenuItem(text = { Text(exercise.displayName()) }, onClick = {
+                        onSelectedIdChange(exercise.id)
                         expanded = false
                     })
                 }
@@ -357,6 +384,53 @@ private fun AddSetCard(
                 showPhotoWeight = false
             },
         )
+    }
+}
+
+@Composable
+private fun RecoveryCoachCard(
+    muscleGroup: MuscleGroup,
+    advice: SuggestionState?,
+    onGenerate: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    GlassCard(
+        borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(Cyan.copy(alpha = 0.55f), Gold.copy(alpha = 0.35f)),
+        ),
+    ) {
+        SectionTitle(stringResource(R.string.recovery_title), accent = Cyan)
+        Spacer(Modifier.height(12.dp))
+
+        when (advice) {
+            null -> {
+                Text(stringResource(R.string.recovery_hint, muscleGroup.label()), color = TextMuted)
+                Spacer(Modifier.height(12.dp))
+                AccentButton(text = stringResource(R.string.recovery_generate), onClick = onGenerate)
+            }
+
+            SuggestionState.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = Cyan, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.recovery_analyzing), color = TextMuted)
+            }
+
+            is SuggestionState.Success -> Column {
+                Text(advice.suggestion, color = Color.White)
+                if (advice.isComplete) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.action_close), color = TextMuted)
+                    }
+                }
+            }
+
+            is SuggestionState.Error -> Column {
+                Text(advice.message, color = Color(0xFFFF6B6B))
+                TextButton(onClick = onGenerate) {
+                    Text(stringResource(R.string.action_retry), color = Cyan)
+                }
+            }
+        }
     }
 }
 

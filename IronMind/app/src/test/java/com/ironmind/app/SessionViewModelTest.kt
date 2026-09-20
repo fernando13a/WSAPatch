@@ -1,6 +1,9 @@
 package com.ironmind.app
 
 import androidx.lifecycle.SavedStateHandle
+import com.ironmind.app.domain.model.MuscleGroup
+import com.ironmind.app.domain.model.SuggestionState
+import com.ironmind.app.domain.usecase.GetRecoveryAdviceUseCase
 import com.ironmind.app.ui.navigation.Destinations
 import com.ironmind.app.ui.session.SessionViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,10 +23,16 @@ class SessionViewModelTest {
         mapOf(Destinations.ARG_SESSION_ID to 0L, Destinations.ARG_ROUTINE_ID to 0L),
     )
 
+    private fun viewModel(
+        repo: FakeWorkoutRepository,
+        notifier: FakeRestTimerNotifier = FakeRestTimerNotifier(),
+        llm: FakeLlmInferenceService = FakeLlmInferenceService(),
+    ) = SessionViewModel(repo, GetRecoveryAdviceUseCase(repo, llm), notifier, FakeAppPreferences(), freeSessionHandle())
+
     @Test
     fun noSessionIsCreatedUntilFirstSetIsLogged() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), FakeAppPreferences(), freeSessionHandle())
+        val vm = viewModel(repo)
 
         assertEquals(0, repo.startSessionCount)
 
@@ -37,7 +46,7 @@ class SessionViewModelTest {
     @Test
     fun finishSessionWithoutLoggingDoesNotPersistAnything() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), FakeAppPreferences(), freeSessionHandle())
+        val vm = viewModel(repo)
 
         var done = false
         vm.finishSession { done = true }
@@ -51,7 +60,7 @@ class SessionViewModelTest {
     fun restTimerStartsAndStops() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
         val notifier = FakeRestTimerNotifier()
-        val vm = SessionViewModel(repo, notifier, FakeAppPreferences(), freeSessionHandle())
+        val vm = viewModel(repo, notifier = notifier)
 
         vm.startRest(90)
         assertEquals(90, vm.restRemaining.value)
@@ -66,5 +75,30 @@ class SessionViewModelTest {
         // Stopping clears the notification and never fires the completion alert.
         assertEquals(1, notifier.cancelCount)
         assertEquals(0, notifier.completeCount)
+    }
+
+    @Test
+    fun generateRecoveryAdviceStreamsIntoState() = runTest(mainRule.dispatcher) {
+        val repo = FakeWorkoutRepository()
+        val vm = viewModel(repo, llm = FakeLlmInferenceService(chunks = listOf("Descansa un poco")))
+
+        vm.generateRecoveryAdvice(MuscleGroup.QUADS)
+
+        val result = vm.recoveryAdvice.value
+        assertTrue(result is SuggestionState.Success && result.isComplete)
+        assertEquals("Descansa un poco", (result as SuggestionState.Success).suggestion)
+    }
+
+    @Test
+    fun dismissRecoveryAdviceClearsState() = runTest(mainRule.dispatcher) {
+        val repo = FakeWorkoutRepository()
+        val vm = viewModel(repo, llm = FakeLlmInferenceService(chunks = listOf("ok")))
+
+        vm.generateRecoveryAdvice(MuscleGroup.QUADS)
+        assertTrue(vm.recoveryAdvice.value != null)
+
+        vm.dismissRecoveryAdvice()
+
+        assertEquals(null, vm.recoveryAdvice.value)
     }
 }
