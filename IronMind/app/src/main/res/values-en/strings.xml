@@ -73,6 +73,23 @@
     <string name="edit_set_title">Edit set %1$d</string>
     <string name="kg_value">%1$d kg</string>
     <string name="plate_calc_open">Plate calculator 🏋️</string>
+
+    <!-- Read the weight from a photo (on-device OCR) -->
+    <string name="photo_weight_title">Weight from photo</string>
+    <string name="photo_weight_desc">Take a photo of the plates or dumbbell. Reading happens on your device, offline. Check what was detected before using it.</string>
+    <string name="photo_weight_take">Take photo</string>
+    <string name="photo_weight_pick">Gallery</string>
+    <string name="photo_weight_analyzing">Reading the photo…</string>
+    <string name="photo_weight_error">Couldn\'t read the photo: %1$s</string>
+    <string name="photo_weight_none">No numbers recognized. Move closer to the plate, with good light and straight on.</string>
+    <string name="photo_weight_detected">Detected (tap to include or exclude):</string>
+    <string name="photo_weight_mode_plates">Plates per side</string>
+    <string name="photo_weight_mode_direct">Direct value</string>
+    <string name="photo_weight_plate_unit">Marked unit:</string>
+    <string name="photo_weight_bar">Bar (%1$s)</string>
+    <string name="photo_weight_total">Total: %1$s</string>
+    <string name="photo_weight_equivalent">Equals %1$s</string>
+    <string name="photo_weight_use">Use this weight</string>
     <string name="plate_calc_title">Plates for %1$s</string>
     <string name="plate_calc_bar">Olympic bar: %1$s</string>
     <string name="plate_calc_bar_only">Just the bar, no plates.</string>

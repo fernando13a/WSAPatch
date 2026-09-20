@@ -25,6 +25,10 @@ Edge / MediaPipe LLM Inference). No account, no backend, no telemetry — everyt
   taxonomy (muscle groups, equipment, splits) is localized too.
 - ⚖️ **kg / lb.** Pick your unit in Settings; data is always stored in kg and only the display/input
   converts, so every weight, chart, 1RM and the plate calculator follow your choice.
+- 📷 **Weight from a photo.** Snap the plates or the dumbbell and on-device OCR (ML Kit, bundled
+  model, no network) reads the printed numbers. You confirm the readings, pick whether they're
+  plates-per-side or a direct value, and whether they're marked in kg or lb — the app totals it
+  (bar + 2 × plates) and converts to your unit.
 
 ## Tech stack
 

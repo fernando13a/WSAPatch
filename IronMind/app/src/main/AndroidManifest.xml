@@ -8,6 +8,17 @@
     <!-- Rest-timer notifications (countdown + completion alert); requested at runtime on API 33+. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+      Reading a weight from a photo hands the capture off to the device camera app, so IronMind
+      needs no CAMERA permission of its own. This <queries> entry only makes that app visible to
+      the intent resolver on Android 11+.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
     <application
         android:name=".IronMindApplication"
         android:allowBackup="true"
@@ -28,6 +39,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Hands the camera app a private cache file to write the capture into. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

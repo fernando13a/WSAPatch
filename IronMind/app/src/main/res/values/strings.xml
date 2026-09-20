@@ -74,6 +74,23 @@
     <string name="edit_set_title">Editar set %1$d</string>
     <string name="kg_value">%1$d kg</string>
     <string name="plate_calc_open">Calcular discos 🏋️</string>
+
+    <!-- Read the weight from a photo (on-device OCR) -->
+    <string name="photo_weight_title">Peso por foto</string>
+    <string name="photo_weight_desc">Toma una foto de los discos o la mancuerna. La lectura se hace en tu dispositivo, sin conexión. Revisa lo detectado antes de usarlo.</string>
+    <string name="photo_weight_take">Tomar foto</string>
+    <string name="photo_weight_pick">Galería</string>
+    <string name="photo_weight_analyzing">Leyendo la foto…</string>
+    <string name="photo_weight_error">No se pudo leer la foto: %1$s</string>
+    <string name="photo_weight_none">No se reconoció ningún número. Acerca más la cámara al disco, con buena luz y sin ángulo.</string>
+    <string name="photo_weight_detected">Detectado (toca para incluir o excluir):</string>
+    <string name="photo_weight_mode_plates">Discos por lado</string>
+    <string name="photo_weight_mode_direct">Valor directo</string>
+    <string name="photo_weight_plate_unit">Unidad marcada:</string>
+    <string name="photo_weight_bar">Barra (%1$s)</string>
+    <string name="photo_weight_total">Total: %1$s</string>
+    <string name="photo_weight_equivalent">Equivale a %1$s</string>
+    <string name="photo_weight_use">Usar este peso</string>
     <string name="plate_calc_title">Discos para %1$s</string>
     <string name="plate_calc_bar">Barra olímpica: %1$s</string>
     <string name="plate_calc_bar_only">Solo la barra, sin discos.</string>

@@ -33,6 +33,9 @@ coil = "2.7.0"
 # On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — wired in Stage 3
 mediapipeGenai = "0.10.24"
 
+# On-device OCR (ML Kit, bundled Latin model — reads plate/dumbbell markings fully offline)
+mlkitTextRecognition = "16.0.1"
+
 # Testing
 junit = "4.13.2"
 androidxJunit = "1.2.1"
@@ -79,6 +82,9 @@ coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 
 # On-device LLM — referenced in Stage 3 (kept here so the catalog is ready)
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeGenai" }
+
+# On-device OCR — bundled model, so reading a weight photo never needs the network
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

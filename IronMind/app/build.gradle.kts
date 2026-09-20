@@ -130,6 +130,10 @@ dependencies {
     // On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — Stage 2.
     implementation(libs.mediapipe.tasks.genai)
 
+    // On-device OCR (ML Kit) — reads the numbers printed on plates/dumbbells from a photo.
+    // The bundled variant ships the model inside the APK, so it works with no network.
+    implementation(libs.mlkit.text.recognition)
+
     // Unit testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

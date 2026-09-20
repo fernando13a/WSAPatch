@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -254,6 +255,7 @@ private fun AddSetCard(
     var reps by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var showPlates by remember { mutableStateOf(false) }
+    var showPhotoWeight by remember { mutableStateOf(false) }
 
     // Default the selector to the first available exercise once loaded.
     LaunchedEffect(exercises) {
@@ -287,6 +289,15 @@ private fun AddSetCard(
                 label = { Text(stringResource(R.string.weight_input_label, unit.suffix())) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                trailingIcon = {
+                    IconButton(onClick = { showPhotoWeight = true }) {
+                        Icon(
+                            Icons.Filled.PhotoCamera,
+                            contentDescription = stringResource(R.string.photo_weight_title),
+                            tint = Cyan,
+                        )
+                    }
+                },
                 modifier = Modifier.weight(1f),
             )
             OutlinedTextField(
@@ -334,6 +345,17 @@ private fun AddSetCard(
     val plateTargetKg = weight.toDoubleOrNull()?.displayUnitToKg(unit)
     if (showPlates && plateTargetKg != null) {
         PlateDialog(targetKg = plateTargetKg, unit = unit, onDismiss = { showPlates = false })
+    }
+
+    if (showPhotoWeight) {
+        PhotoWeightDialog(
+            displayUnit = unit,
+            onDismiss = { showPhotoWeight = false },
+            onAccept = { kg ->
+                weight = formatEditableWeight(kg.toDisplayUnit(unit))
+                showPhotoWeight = false
+            },
+        )
     }
 }
 
