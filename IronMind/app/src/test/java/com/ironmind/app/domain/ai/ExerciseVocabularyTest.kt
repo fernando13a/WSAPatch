@@ -45,6 +45,9 @@ class ExerciseVocabularyTest {
     fun translatesEquipmentVariants() {
         val translated = ExerciseVocabulary.translateName("Cable Curl")
         assertNotNull(translated)
-        assertEquals("Poleas Curl", translated)
+        // "cable curl" has a dedicated fullNameOverrides entry (checked before generic
+        // word-by-word composition) precisely because it reads more naturally in Spanish than
+        // the literal "Poleas Curl" composition would.
+        assertEquals("Curl en Polea", translated)
     }
 }

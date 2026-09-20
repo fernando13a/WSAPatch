@@ -93,6 +93,11 @@ object ExerciseVocabulary {
 
     // Full exercise name overrides (for ambiguous or compound names)
     private val fullNameOverrides = mapOf(
+        // "bench" has no entry in equipment/movements/muscles, and even if it did, word-by-word
+        // composition preserves English word order ("Barra Banco Press"), not the natural
+        // Spanish "Press de Banco" — one of the most common lifts in the catalog, so it gets an
+        // explicit override rather than falling through to an untranslated/awkward composition.
+        "barbell bench press" to "Barra Press de Banco",
         "ab wheel" to "Rueda Abdominal",
         "sled push" to "Empuje de Trineo",
         "sled pull" to "Jalón de Trineo",

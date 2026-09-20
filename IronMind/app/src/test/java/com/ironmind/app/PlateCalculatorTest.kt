@@ -80,8 +80,11 @@ class PlateCalculatorTest {
     fun handlesBarWeight45LbProperly() {
         val plan = computePlatePlan(targetKg = 100.0, barKg = 20.411)
 
-        // Using ~45 lb bar (20.411 kg) with standard plates
-        // Should still calculate correctly
-        assertEquals(100.0, plan.achievable, EPSILON)
+        // With a fractional bar weight (~45 lb = 20.411 kg) and standard kg plates in 1.25 kg
+        // increments, 100.0 kg exactly is unreachable: 20.411 + 2*(25+10+2.5+1.25) = 97.911.
+        // This verifies the calculation degrades gracefully (closest achievable + leftover)
+        // instead of erroring or rounding to a wrong "exact" value.
+        assertEquals(97.911, plan.achievable, EPSILON)
+        assertEquals(2.089, plan.leftover, EPSILON)
     }
 }
