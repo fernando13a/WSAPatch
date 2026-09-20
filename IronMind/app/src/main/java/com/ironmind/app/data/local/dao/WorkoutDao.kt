@@ -59,6 +59,9 @@ interface WorkoutDao {
     @Delete
     suspend fun deleteExercise(exercise: ExerciseEntity)
 
+    @Query("UPDATE exercises SET nameEs = :nameEs WHERE id = :id")
+    suspend fun updateExerciseNameEs(id: Long, nameEs: String)
+
     // ---------------------------------------------------------------------------------
     // Routines
     // ---------------------------------------------------------------------------------

@@ -29,6 +29,7 @@ fun ExerciseEntity.toDomain(): Exercise = Exercise(
     instructions = instructions,
     imagePath = imagePath,
     imageUrl = imageUrl,
+    nameEs = nameEs,
 )
 
 fun Exercise.toEntity(): ExerciseEntity = ExerciseEntity(
@@ -41,6 +42,7 @@ fun Exercise.toEntity(): ExerciseEntity = ExerciseEntity(
     instructions = instructions,
     imagePath = imagePath,
     imageUrl = imageUrl,
+    nameEs = nameEs,
 )
 
 // ---- Routine ------------------------------------------------------------------------

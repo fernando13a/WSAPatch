@@ -24,4 +24,6 @@ data class ExerciseEntity(
     val imagePath: String? = null,
     /** Optional public demo-image URL (loaded on demand and cached); null for user-only exercises. */
     val imageUrl: String? = null,
+    /** Spanish name for bilingual display; auto-populated from vocabulary or Gemma translation. */
+    val nameEs: String? = null,
 )

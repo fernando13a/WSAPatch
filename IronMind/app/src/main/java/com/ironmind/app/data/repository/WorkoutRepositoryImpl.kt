@@ -44,6 +44,10 @@ class WorkoutRepositoryImpl @Inject constructor(
         dao.getExerciseById(id)?.toDomain()
     }
 
+    override suspend fun getAllExercises(): List<Exercise> = withContext(dispatchers.io) {
+        dao.getAllExercisesOnce().map { it.toDomain() }
+    }
+
     override suspend fun upsertExercise(exercise: Exercise): Long = withContext(dispatchers.io) {
         dao.upsertExercise(exercise.toEntity())
     }
@@ -51,6 +55,11 @@ class WorkoutRepositoryImpl @Inject constructor(
     override suspend fun deleteExercise(exercise: Exercise) = withContext(dispatchers.io) {
         dao.deleteExercise(exercise.toEntity())
     }
+
+    override suspend fun updateExerciseNameEs(exerciseId: Long, spanishName: String) =
+        withContext(dispatchers.io) {
+            dao.updateExerciseNameEs(exerciseId, spanishName)
+        }
 
     // ---- Routines -------------------------------------------------------------------
     override fun observeRoutines(): Flow<List<Routine>> =

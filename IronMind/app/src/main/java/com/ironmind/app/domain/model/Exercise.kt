@@ -18,4 +18,6 @@ data class Exercise(
     val imagePath: String? = null,
     /** Optional public demo-image URL (loaded on demand and cached). */
     val imageUrl: String? = null,
+    /** Spanish name for bilingual display; auto-populated from vocabulary or Gemma. */
+    val nameEs: String? = null,
 )
