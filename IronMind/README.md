@@ -140,6 +140,7 @@ Requires Android Studio (Ladybug+) or the Android SDK with `ANDROID_HOME` set.
 cd IronMind
 ./gradlew assembleDebug        # build the debug APK
 ./gradlew assembleRelease      # R8/minified release build
+./gradlew bundleRelease        # build Android App Bundle (AAB) for Play Store
 ./gradlew testDebugUnitTest    # JVM unit tests (mappers, prompt builder, backup, use case)
 ./gradlew connectedDebugAndroidTest   # instrumented Room DAO + backup tests (device/emulator)
 ```
@@ -147,6 +148,40 @@ cd IronMind
 - **Min SDK:** 26 · **Target/Compile SDK:** 35 · **JDK:** 17
 - Room schemas are exported to `app/schemas/`. When you bump the DB version, add the `Migration` in
   `data/local/Migrations.kt` and validate it with `MigrationTestHelper`.
+
+## Play Store Release 📱
+
+IronMind v1.0.0 is ready for Play Store distribution! See **[PLAY_STORE_RELEASE.md](../PLAY_STORE_RELEASE.md)** for:
+
+- **Signing configuration** — generating and managing your release keystore
+- **Building AAB** — creating an Android App Bundle optimized for Play Store
+- **Store submission** — step-by-step guide to upload and rollout
+- **Store listings** — English and Spanish app descriptions, screenshots, and release notes
+
+**Quick start:**
+
+```bash
+# 1. Generate keystore (one time)
+keytool -genkey -v -keystore keystore.jks -keyalg RSA -keysize 2048 \
+  -validity 10000 -alias ironmind-release-key
+
+# 2. Configure signing
+cp keystore.properties.example keystore.properties
+# (edit with your keystore details)
+
+# 3. Build AAB for Play Store
+./gradlew bundleRelease
+
+# 4. Verify signing
+jarsigner -verify -verbose app/build/outputs/bundle/release/app-release.aab
+
+# 5. Upload to Play Console
+# See PLAY_STORE_RELEASE.md for step-by-step instructions
+```
+
+**Privacy & Compliance:**
+- See **[PRIVACY_POLICY.md](../PRIVACY_POLICY.md)** for the complete privacy policy
+- See **[PLAY_STORE_LISTING_EN.md](../PLAY_STORE_LISTING_EN.md)** and **[PLAY_STORE_LISTING_ES.md](../PLAY_STORE_LISTING_ES.md)** for store descriptions
 
 ## Continuous integration & downloading the APK
 

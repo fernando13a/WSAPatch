@@ -27,7 +27,7 @@ android {
         applicationId = "com.ironmind.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        versionCode = 100  // Semantic: major.minor.patch as 1.0.0 = 100
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
