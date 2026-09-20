@@ -85,12 +85,22 @@ android {
         }
     }
 
-    // Exposes the exported Room schema history (see the `ksp { }` block below) to instrumented
-    // tests as assets, so MigrationTestHelper can load a past version's schema and replay real
-    // migrations against it instead of only ever testing against the latest schema.
     sourceSets {
+        // Exposes the exported Room schema history (see the `ksp { }` block below) to
+        // instrumented tests as assets, so MigrationTestHelper can load a past version's schema
+        // and replay real migrations against it instead of only ever testing against the latest
+        // schema.
         getByName("androidTest") {
             assets.srcDirs("$projectDir/schemas")
+            java.srcDirs("src/testShared/java")
+        }
+        // Fakes/rules under src/testShared (FakeWorkoutRepository, FakeLlmInferenceService, ...)
+        // are plain Kotlin with no Android framework dependency, so both the JVM unit tests
+        // (test/) and the on-device instrumented tests (androidTest/, e.g. Compose UI tests that
+        // construct a real ViewModel with fakes instead of needing Hilt test infrastructure)
+        // share the exact same doubles instead of each maintaining their own copy.
+        getByName("test") {
+            java.srcDirs("src/testShared/java")
         }
     }
 }
