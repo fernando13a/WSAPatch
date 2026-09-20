@@ -90,4 +90,25 @@ class BackupRestoreInstrumentedTest {
         assertEquals(routineId, detail?.session?.routineId)
         assertEquals(2, detail?.sets?.size)
     }
+
+    @Test
+    fun importEmptyBackup_WipesAllData() = runTest {
+        // Populate with data
+        dao.upsertExercise(ExerciseEntity(name = "Test Exercise", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL))
+        dao.insertSession(WorkoutSessionEntity(startedAt = 1_000L, title = "Test Session"))
+
+        // Import empty backup
+        val emptyJson = manager.export()  // Export from fresh DB (nothing in it yet)
+        val result = manager.import(emptyJson)
+
+        // All counts should be zero
+        assertEquals(0, result.exercises)
+        assertEquals(0, result.routines)
+        assertEquals(0, result.sessions)
+        assertEquals(0, result.setLogs)
+
+        // Database should be empty
+        assertEquals(0, dao.getAllExercisesOnce().size)
+        assertEquals(0, dao.getAllSessionsOnce().size)
+    }
 }
