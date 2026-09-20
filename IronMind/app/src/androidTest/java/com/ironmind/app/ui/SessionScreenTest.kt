@@ -3,6 +3,7 @@ package com.ironmind.app.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -91,7 +92,7 @@ class SessionScreenTest {
         }
 
         val expectedLabel = context.getString(R.string.weight_input_label, context.getString(R.string.unit_lb))
-        composeTestRule.onNodeWithText(expectedLabel).assertIsDisplayed()
+        composeTestRule.onNodeWithText(expectedLabel).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -100,6 +101,6 @@ class SessionScreenTest {
             SessionScreen(onBack = {}, viewModel = viewModel())
         }
 
-        composeTestRule.onNodeWithText(context.getString(R.string.select_exercise)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.select_exercise)).performScrollTo().assertIsDisplayed()
     }
 }

@@ -70,13 +70,17 @@ class WorkoutFlowIntegrationTest {
         )
         val sessionId = dao.insertSession(session)
 
-        // 3. Log sets
+        // 3. Log sets. Explicit, distinct performedAt values so DESC ordering below is
+        // deterministic — two calls to the default `System.currentTimeMillis()` in a tight loop
+        // can tie on a fast emulator, which made the ordering assertions flaky.
+        val now = System.currentTimeMillis()
         val set1 = SetLogEntity(
             sessionId = sessionId,
             exerciseId = exerciseId,
             setNumber = 1,
             weightKg = 100.0,
             reps = 8,
+            performedAt = now,
         )
         val set2 = SetLogEntity(
             sessionId = sessionId,
@@ -84,6 +88,7 @@ class WorkoutFlowIntegrationTest {
             setNumber = 2,
             weightKg = 100.0,
             reps = 6,
+            performedAt = now + 1_000,
         )
 
         dao.upsertSetLog(set1)

@@ -3,6 +3,7 @@ package com.ironmind.app.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.ironmind.app.FakeAppPreferences
@@ -78,12 +79,22 @@ class DashboardScreenTest {
         val now = System.currentTimeMillis()
         val dayMillis = TimeUnit.DAYS.toMillis(1)
         val repo = FakeWorkoutRepository().apply {
-            sessionDetailsFlow.value = (0..2).map { daysAgo ->
+            // 3 consecutive days (today, yesterday, day before) for a streak of 3, plus 2 more
+            // sessions far enough in the past to not extend that streak — so totalSessions (5)
+            // and streak (3) land on different numbers and don't collide in onNodeWithText("3").
+            val streakSessions = (0..2).map { daysAgo ->
                 SessionDetail(
                     session = WorkoutSession(id = daysAgo.toLong() + 1, startedAt = now - daysAgo * dayMillis),
                     sets = emptyList(),
                 )
             }
+            val olderSessions = listOf(10L, 11L).map { daysAgo ->
+                SessionDetail(
+                    session = WorkoutSession(id = daysAgo + 100, startedAt = now - daysAgo * dayMillis),
+                    sets = emptyList(),
+                )
+            }
+            sessionDetailsFlow.value = streakSessions + olderSessions
         }
 
         setDashboard(repo)
@@ -95,7 +106,7 @@ class DashboardScreenTest {
     fun displaysStartFreeSessionButton() {
         setDashboard()
 
-        composeTestRule.onNodeWithText(context.getString(R.string.start_free_session)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.start_free_session)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -113,6 +124,6 @@ class DashboardScreenTest {
 
         setDashboard(repo)
 
-        composeTestRule.onNodeWithText("Push Day").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Push Day").performScrollTo().assertIsDisplayed()
     }
 }

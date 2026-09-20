@@ -97,8 +97,17 @@ class BackupRestoreInstrumentedTest {
         dao.upsertExercise(ExerciseEntity(name = "Test Exercise", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL))
         dao.insertSession(WorkoutSessionEntity(startedAt = 1_000L, title = "Test Session"))
 
-        // Import empty backup
-        val emptyJson = manager.export()  // Export from fresh DB (nothing in it yet)
+        // An empty backup, sourced from a separate, genuinely empty database — not `db`, which was
+        // just seeded above. Exporting from `manager`/`db` at this point would capture that seeded
+        // data instead of an empty snapshot.
+        val emptyDb = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            IronMindDatabase::class.java,
+        ).build()
+        val emptyManager = RoomBackupManager(emptyDb, emptyDb.workoutDao(), StandardDispatcherProvider())
+        val emptyJson = emptyManager.export()
+        emptyDb.close()
+
         val result = manager.import(emptyJson)
 
         // All counts should be zero
