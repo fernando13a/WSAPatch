@@ -84,13 +84,13 @@ class PhotoOcrEdgeCasesTest {
     @Test
     fun snapsNoiseToNearestPlate() {
         val snapped = snapToPlate(19.8, WeightUnit.KG)
-        assertEquals(20.0, snapped, EPSILON)
+        assertEquals(20.0, snapped!!, EPSILON)
     }
 
     @Test
     fun snapsOcrMisreadToPlate() {
         val snapped = snapToPlate(24.9, WeightUnit.KG)
-        assertEquals(25.0, snapped, EPSILON)
+        assertEquals(25.0, snapped!!, EPSILON)
     }
 
     @Test
