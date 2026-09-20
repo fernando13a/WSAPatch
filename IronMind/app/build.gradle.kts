@@ -134,6 +134,9 @@ dependencies {
     // The bundled variant ships the model inside the APK, so it works with no network.
     implementation(libs.mlkit.text.recognition)
 
+    // WorkManager for robust background downloads + foreground service.
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Unit testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

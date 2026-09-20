@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ironmind.app.data.ai.AiConstants
 import com.ironmind.app.data.ai.ModelDownloader
+import com.ironmind.app.data.ai.RobustModelDownloadService
 import com.ironmind.app.domain.model.ModelDownloadState
 import com.ironmind.app.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ModelDownloadViewModel @Inject constructor(
     private val downloader: ModelDownloader,
+    private val robustDownloader: RobustModelDownloadService,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -33,10 +35,25 @@ class ModelDownloadViewModel @Inject constructor(
         // present and a default URL is configured.
         val autostart = savedStateHandle[Destinations.ARG_AUTOSTART] ?: false
         if (autostart && defaultUrl.isNotBlank() && !downloader.isReady()) {
-            download(defaultUrl)
+            downloadWithMobileWarning(defaultUrl)
         }
     }
 
+    /** Download with mobile data warning (shows prompt if on cellular). */
+    fun downloadWithMobileWarning(url: String) {
+        if (url.isBlank()) return
+        viewModelScope.launch {
+            robustDownloader.downloadWithWarning(url.trim()).collect { _state.value = it }
+        }
+    }
+
+    /** User confirmed download over mobile data; proceed with WorkManager for persistence. */
+    fun confirmDownloadOnMobileData(url: String) {
+        robustDownloader.confirmAndDownload(url.trim())
+        _state.value = ModelDownloadState.Downloading(null)
+    }
+
+    /** Direct download (for WiFi or custom URLs). */
     fun download(url: String) {
         if (url.isBlank()) return
         viewModelScope.launch {

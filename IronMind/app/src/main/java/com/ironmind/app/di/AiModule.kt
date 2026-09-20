@@ -23,3 +23,4 @@ abstract class AiModule {
     @Singleton
     abstract fun bindExerciseTranslationService(impl: ExerciseTranslationServiceImpl): ExerciseTranslationService
 }
+
