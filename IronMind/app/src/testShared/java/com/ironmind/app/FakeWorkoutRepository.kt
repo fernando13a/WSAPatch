@@ -10,6 +10,7 @@ import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /** Full arguments of one [WorkoutRepository.addExerciseToRoutine] call, recorded for assertions. */
@@ -35,6 +36,9 @@ class FakeWorkoutRepository : WorkoutRepository {
     val sessionsFlow = MutableStateFlow<List<WorkoutSession>>(emptyList())
     val sessionDetailsFlow = MutableStateFlow<List<SessionDetail>>(emptyList())
     val sessionDetailFlow = MutableStateFlow<SessionDetail?>(null)
+    /** Per-sessionId overrides for [observeSessionDetail] — needed when a test juggles more than
+     *  one session at once (e.g. comparing two). Falls back to [sessionDetailFlow] when unset. */
+    val sessionDetailsById = mutableMapOf<Long, SessionDetail>()
     val setLogsForExerciseFlow = MutableStateFlow<List<SetLog>>(emptyList())
     val routinePlanFlow = MutableStateFlow<RoutinePlan?>(null)
 
@@ -113,7 +117,8 @@ class FakeWorkoutRepository : WorkoutRepository {
     // ---- Sessions & set logs ----
     override fun observeSessions(): Flow<List<WorkoutSession>> = sessionsFlow
     override fun observeSessionDetails(): Flow<List<SessionDetail>> = sessionDetailsFlow
-    override fun observeSessionDetail(sessionId: Long): Flow<SessionDetail?> = sessionDetailFlow
+    override fun observeSessionDetail(sessionId: Long): Flow<SessionDetail?> =
+        sessionDetailsById[sessionId]?.let { flowOf(it) } ?: sessionDetailFlow
     override suspend fun getSession(id: Long): WorkoutSession? = sessionToReturn
     override suspend fun startSession(session: WorkoutSession): Long {
         startSessionCount++

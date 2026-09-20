@@ -190,6 +190,12 @@
     <string name="goal_strength">Fuerza</string>
     <string name="goal_hypertrophy">Hipertrofia</string>
     <string name="goal_endurance">Resistencia</string>
+    <string name="compare_sessions_title">Comparar sesiones</string>
+    <string name="compare_sessions_first">Sesión A</string>
+    <string name="compare_sessions_second">Sesión B</string>
+    <string name="compare_sessions_pick">Elige una sesión</string>
+    <string name="compare_sessions_compare">Comparar con IA</string>
+    <string name="compare_sessions_analyzing">Comparando sesiones…</string>
     <string name="reference_image_title">Imagen de referencia</string>
     <string name="reference_image_cd">Imagen de referencia del ejercicio</string>
     <string name="reference_image_hint">Adjunta tu propia foto o GIF para recordar la técnica o el equipo. Se guarda en tu dispositivo.</string>
