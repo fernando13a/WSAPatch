@@ -3,6 +3,7 @@ package com.ironmind.app.ui.exercise
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,9 +65,11 @@ import java.io.File
 @Composable
 fun ExerciseDetailScreen(
     onBack: () -> Unit,
+    onOpenExercise: (Long) -> Unit = {},
     viewModel: ExerciseDetailViewModel = hiltViewModel(),
 ) {
     val exercise by viewModel.exercise.collectAsStateWithLifecycle()
+    val alternatives by viewModel.alternatives.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Coil image loader with GIF/animated-WebP support, so an attached GIF actually plays.
@@ -201,6 +204,34 @@ fun ExerciseDetailScreen(
                     Text(stringResource(R.string.instructions_empty), color = TextMuted)
                 } else {
                     Text(instructions, color = TextMuted, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            GlassCard {
+                SectionTitle(stringResource(R.string.alternatives_title), accent = Cyan)
+                Spacer(Modifier.height(12.dp))
+                if (alternatives.isEmpty()) {
+                    Text(stringResource(R.string.alternatives_empty), color = TextMuted)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        alternatives.forEach { alternative ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onOpenExercise(alternative.id) },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(alternative.displayName(), color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        alternative.equipment.label(),
+                                        color = TextMuted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

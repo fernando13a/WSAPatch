@@ -35,6 +35,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM exercises WHERE muscleGroup = :muscleGroup ORDER BY name ASC")
     fun observeExercisesByMuscleGroup(muscleGroup: MuscleGroup): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT * FROM exercises WHERE muscleGroup = :muscleGroup ORDER BY name ASC")
+    suspend fun getExercisesByMuscleGroupOnce(muscleGroup: MuscleGroup): List<ExerciseEntity>
+
     @Query("SELECT * FROM exercises WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
     fun searchExercises(query: String): Flow<List<ExerciseEntity>>
 

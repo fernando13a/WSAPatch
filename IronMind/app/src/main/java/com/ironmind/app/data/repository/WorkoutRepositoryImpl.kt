@@ -13,6 +13,7 @@ import com.ironmind.app.domain.model.SessionDetail
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
+import com.ironmind.app.domain.util.filterAlternatives
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -46,6 +47,12 @@ class WorkoutRepositoryImpl @Inject constructor(
 
     override suspend fun getAllExercises(): List<Exercise> = withContext(dispatchers.io) {
         dao.getAllExercisesOnce().map { it.toDomain() }
+    }
+
+    override suspend fun getAlternatives(exerciseId: Long): List<Exercise> = withContext(dispatchers.io) {
+        val exercise = dao.getExerciseById(exerciseId)?.toDomain() ?: return@withContext emptyList()
+        val sameMuscleGroup = dao.getExercisesByMuscleGroupOnce(exercise.muscleGroup).map { it.toDomain() }
+        filterAlternatives(exercise, sameMuscleGroup)
     }
 
     override suspend fun upsertExercise(exercise: Exercise): Long = withContext(dispatchers.io) {

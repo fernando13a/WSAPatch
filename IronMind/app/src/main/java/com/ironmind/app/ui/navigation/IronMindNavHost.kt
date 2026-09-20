@@ -130,7 +130,12 @@ fun IronMindNavHost(navController: NavHostController = rememberNavController()) 
                     navArgument(Destinations.ARG_EXERCISE_ID) { type = NavType.LongType; defaultValue = 0L },
                 ),
             ) {
-                ExerciseDetailScreen(onBack = { navController.popBackStack() })
+                ExerciseDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenExercise = { exerciseId ->
+                        navController.navigate(Destinations.exerciseDetail(exerciseId))
+                    },
+                )
             }
         }
     }

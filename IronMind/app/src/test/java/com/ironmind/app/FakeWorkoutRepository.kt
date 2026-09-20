@@ -46,6 +46,9 @@ class FakeWorkoutRepository : WorkoutRepository {
     val addedToRoutine = mutableListOf<Triple<Long, Long, Int>>() // routineId, exerciseId, position
     val removedFromRoutine = mutableListOf<Pair<Long, Long>>()
 
+    /** Controllable return value for [getAlternatives], keyed by the exerciseId asked for. */
+    var alternativesByExerciseId: Map<Long, List<Exercise>> = emptyMap()
+
     // ---- Exercises ----
     override fun observeExercises(): Flow<List<Exercise>> = exercisesFlow
     override fun observeExercisesByMuscleGroup(muscleGroup: MuscleGroup): Flow<List<Exercise>> = exercisesFlow
@@ -53,6 +56,9 @@ class FakeWorkoutRepository : WorkoutRepository {
     override fun observeExercise(id: Long): Flow<Exercise?> =
         exercisesFlow.map { list -> list.firstOrNull { it.id == id } }
     override suspend fun getExercise(id: Long): Exercise? = exercisesFlow.value.firstOrNull { it.id == id }
+    override suspend fun getAllExercises(): List<Exercise> = exercisesFlow.value
+    override suspend fun getAlternatives(exerciseId: Long): List<Exercise> =
+        alternativesByExerciseId[exerciseId].orEmpty()
     override suspend fun upsertExercise(exercise: Exercise): Long {
         val id = if (exercise.id == 0L) nextExerciseId++ else exercise.id
         val stored = exercise.copy(id = id)
@@ -62,6 +68,11 @@ class FakeWorkoutRepository : WorkoutRepository {
     }
     override suspend fun deleteExercise(exercise: Exercise) {
         exercisesFlow.value = exercisesFlow.value.filterNot { it.id == exercise.id }
+    }
+    override suspend fun updateExerciseNameEs(exerciseId: Long, spanishName: String) {
+        exercisesFlow.value = exercisesFlow.value.map { exercise ->
+            if (exercise.id == exerciseId) exercise.copy(nameEs = spanishName) else exercise
+        }
     }
 
     // ---- Routines ----

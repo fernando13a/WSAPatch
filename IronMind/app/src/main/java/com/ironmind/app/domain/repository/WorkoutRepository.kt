@@ -23,6 +23,12 @@ interface WorkoutRepository {
     fun observeExercise(id: Long): Flow<Exercise?>
     suspend fun getExercise(id: Long): Exercise?
     suspend fun getAllExercises(): List<Exercise>
+
+    /**
+     * Deterministic (non-AI) alternatives for [exerciseId]: exercises that train the same
+     * muscle group with different equipment, excluding the exercise itself.
+     */
+    suspend fun getAlternatives(exerciseId: Long): List<Exercise>
     suspend fun upsertExercise(exercise: Exercise): Long
     suspend fun deleteExercise(exercise: Exercise)
     suspend fun updateExerciseNameEs(exerciseId: Long, spanishName: String)

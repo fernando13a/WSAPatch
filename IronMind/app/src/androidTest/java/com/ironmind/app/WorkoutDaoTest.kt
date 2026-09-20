@@ -90,6 +90,23 @@ class WorkoutDaoTest {
     }
 
     @Test
+    fun getExercisesByMuscleGroupOnce_returnsOnlyThatMuscleGroup() = runTest {
+        dao.upsertExercise(
+            ExerciseEntity(name = "Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL),
+        )
+        dao.upsertExercise(
+            ExerciseEntity(name = "Push-up", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BODYWEIGHT),
+        )
+        dao.upsertExercise(
+            ExerciseEntity(name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL),
+        )
+
+        val chestExercises = dao.getExercisesByMuscleGroupOnce(MuscleGroup.CHEST)
+
+        assertEquals(setOf("Bench Press", "Push-up"), chestExercises.map { it.name }.toSet())
+    }
+
+    @Test
     fun deletingSession_cascadesToSetLogs() = runTest {
         val sessionId = dao.insertSession(WorkoutSessionEntity(startedAt = 2_000L))
         val curlId = dao.upsertExercise(

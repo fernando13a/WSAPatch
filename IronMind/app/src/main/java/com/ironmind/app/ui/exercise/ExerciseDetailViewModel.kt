@@ -11,8 +11,10 @@ import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,6 +33,18 @@ class ExerciseDetailViewModel @Inject constructor(
 
     val exercise: StateFlow<Exercise?> = repository.observeExercise(exerciseId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Deterministic (non-AI) same-muscle-group / different-equipment alternatives. */
+    private val _alternatives = MutableStateFlow<List<Exercise>>(emptyList())
+    val alternatives: StateFlow<List<Exercise>> = _alternatives.asStateFlow()
+
+    init {
+        if (exerciseId != 0L) {
+            viewModelScope.launch {
+                _alternatives.value = repository.getAlternatives(exerciseId)
+            }
+        }
+    }
 
     /** Copies the picked image into app storage and links it to this exercise. */
     fun attachImage(uri: Uri) {

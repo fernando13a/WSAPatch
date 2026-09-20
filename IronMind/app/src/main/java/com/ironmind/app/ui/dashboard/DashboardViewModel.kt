@@ -8,6 +8,7 @@ import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.usecase.GetProgressionSuggestionUseCase
 import com.ironmind.app.domain.util.StreakCalculator
+import com.ironmind.app.ui.util.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +60,7 @@ class DashboardViewModel @Inject constructor(
         repository.observeRoutinePlans(),
         repository.observeSessionDetails(),
     ) { exercises, plans, sessions ->
-        val exerciseNames = exercises.associate { it.id to it.name }
+        val exerciseNames = exercises.associate { it.id to it.displayName() }
         val weekAgo = System.currentTimeMillis() - 7.days.inWholeMilliseconds
         val trainedThisWeek = sessions
             .filter { it.session.startedAt >= weekAgo }
