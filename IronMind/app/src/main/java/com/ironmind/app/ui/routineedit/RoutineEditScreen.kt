@@ -51,6 +51,7 @@ import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
@@ -109,10 +110,11 @@ fun RoutineEditScreen(
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.split_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
-                EnumDropdown(
-                    current = state.split.name,
-                    options = RoutineSplit.entries.map { it.name },
-                    onSelect = { viewModel.setSplit(RoutineSplit.valueOf(it)) },
+                LabeledDropdown(
+                    currentLabel = state.split.label(),
+                    options = RoutineSplit.entries,
+                    optionLabel = { it.label() },
+                    onSelect = viewModel::setSplit,
                 )
             }
 
@@ -203,6 +205,31 @@ private fun EnumDropdown(current: String, options: List<String>, onSelect: (Stri
     }
 }
 
+/** A dropdown that shows a localized label per option while selecting by the underlying value. */
+@Composable
+private fun <T> LabeledDropdown(
+    currentLabel: String,
+    options: List<T>,
+    optionLabel: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(currentLabel, color = Cyan)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                val optLabel = optionLabel(option)
+                DropdownMenuItem(text = { Text(optLabel) }, onClick = {
+                    onSelect(option)
+                    expanded = false
+                })
+            }
+        }
+    }
+}
+
 @Composable
 private fun NewExerciseDialog(
     onDismiss: () -> Unit,
@@ -231,16 +258,18 @@ private fun NewExerciseDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(stringResource(R.string.muscle_group_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
-                EnumDropdown(
-                    current = muscle.name,
-                    options = MuscleGroup.entries.map { it.name },
-                    onSelect = { muscle = MuscleGroup.valueOf(it) },
+                LabeledDropdown(
+                    currentLabel = muscle.label(),
+                    options = MuscleGroup.entries,
+                    optionLabel = { it.label() },
+                    onSelect = { muscle = it },
                 )
                 Text(stringResource(R.string.equipment_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
-                EnumDropdown(
-                    current = equipment.name,
-                    options = Equipment.entries.map { it.name },
-                    onSelect = { equipment = Equipment.valueOf(it) },
+                LabeledDropdown(
+                    currentLabel = equipment.label(),
+                    options = Equipment.entries,
+                    optionLabel = { it.label() },
+                    onSelect = { equipment = it },
                 )
             }
         },

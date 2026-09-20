@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.ui.components.AccentButton
+import com.ironmind.app.ui.components.CircularRestTimer
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
@@ -77,6 +78,7 @@ fun SessionScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val restRemaining by viewModel.restRemaining.collectAsStateWithLifecycle()
+    val restTotal by viewModel.restTotal.collectAsStateWithLifecycle()
 
     // Keep the screen awake during a workout.
     val view = LocalView.current
@@ -150,7 +152,14 @@ fun SessionScreen(
                 }
             }
 
-            item { RestTimerCard(restRemaining = restRemaining, onStart = viewModel::startRest, onStop = viewModel::stopRest) }
+            item {
+                RestTimerCard(
+                    restRemaining = restRemaining,
+                    restTotal = restTotal,
+                    onStart = viewModel::startRest,
+                    onStop = viewModel::stopRest,
+                )
+            }
 
             item {
                 AddSetCard(
@@ -187,26 +196,38 @@ fun SessionScreen(
 }
 
 @Composable
-private fun RestTimerCard(restRemaining: Int, onStart: (Int) -> Unit, onStop: () -> Unit) {
+private fun RestTimerCard(
+    restRemaining: Int,
+    restTotal: Int,
+    onStart: (Int) -> Unit,
+    onStop: () -> Unit,
+) {
     GlassCard {
         SectionTitle(stringResource(R.string.rest_title), accent = Cyan)
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = formatMmSs(restRemaining),
-            color = if (restRemaining > 0) Cyan else TextMuted,
-            style = androidx.compose.material3.MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
+        Spacer(Modifier.height(16.dp))
+        CircularRestTimer(
+            remaining = restRemaining,
+            total = restTotal,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             listOf(60, 90, 120).forEach { seconds ->
-                OutlinedButton(onClick = { onStart(seconds) }) {
+                OutlinedButton(onClick = { onStart(seconds) }, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.rest_seconds, seconds), color = Gold)
                 }
             }
-            if (restRemaining > 0) {
-                TextButton(onClick = onStop) { Text(stringResource(R.string.rest_stop), color = TextMuted) }
-            }
+        }
+        if (restRemaining > 0) {
+            Spacer(Modifier.height(4.dp))
+            TextButton(
+                onClick = onStop,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) { Text(stringResource(R.string.rest_stop), color = TextMuted) }
         }
     }
 }

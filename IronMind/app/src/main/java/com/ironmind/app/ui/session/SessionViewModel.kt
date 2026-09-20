@@ -102,10 +102,15 @@ class SessionViewModel @Inject constructor(
     // ---- Rest timer -----------------------------------------------------------------
     private val _restRemaining = MutableStateFlow(0)
     val restRemaining: StateFlow<Int> = _restRemaining.asStateFlow()
+
+    // The full duration of the current rest, so the UI can draw a proportional countdown ring.
+    private val _restTotal = MutableStateFlow(0)
+    val restTotal: StateFlow<Int> = _restTotal.asStateFlow()
     private var restJob: Job? = null
 
     fun startRest(seconds: Int) {
         restJob?.cancel()
+        _restTotal.value = seconds
         _restRemaining.value = seconds
         // Mirror the countdown into a notification so a backgrounded / pocketed user gets the buzz
         // when it ends, not only while the Session screen is on-screen.
@@ -123,6 +128,7 @@ class SessionViewModel @Inject constructor(
     fun stopRest() {
         restJob?.cancel()
         _restRemaining.value = 0
+        _restTotal.value = 0
         restNotifier.cancel()
     }
 

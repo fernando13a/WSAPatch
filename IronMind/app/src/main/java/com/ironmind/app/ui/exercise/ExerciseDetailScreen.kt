@@ -47,6 +47,7 @@ import com.ironmind.app.R
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
@@ -102,9 +103,11 @@ fun ExerciseDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             GlassCard {
-                LabeledValue(label = stringResource(R.string.muscle_group_label), value = exercise?.muscleGroup?.name ?: "—")
+                val muscleLabel = exercise?.muscleGroup?.label() ?: "—"
+                val equipmentLabel = exercise?.equipment?.label() ?: "—"
+                LabeledValue(label = stringResource(R.string.muscle_group_label), value = muscleLabel)
                 Spacer(Modifier.height(8.dp))
-                LabeledValue(label = stringResource(R.string.equipment_label), value = exercise?.equipment?.name ?: "—")
+                LabeledValue(label = stringResource(R.string.equipment_label), value = equipmentLabel)
             }
 
             GlassCard {

@@ -17,6 +17,10 @@
     <string name="chart_cd">Gráfico de evolución de carga</string>
 
     <!-- Dashboard -->
+    <string name="dash_engine_label">NEURAL STRENGTH ENGINE</string>
+    <string name="dash_tagline">Tu coach de fuerza, 100% en tu dispositivo.</string>
+    <string name="badge_on_device_ai">IA ON-DEVICE</string>
+    <string name="badge_offline">100% OFFLINE</string>
     <string name="dash_streak_label">Racha (días)</string>
     <string name="dash_streak_value">🔥 %1$d</string>
     <string name="dash_sessions_label">Sesiones</string>
@@ -46,6 +50,8 @@
     <string name="session_finish">Finalizar</string>
     <string name="session_exercises_title">Ejercicios</string>
     <string name="rest_title">Descanso</string>
+    <string name="rest_dial_active">DESCANSO</string>
+    <string name="rest_dial_ready">LISTO</string>
     <string name="rest_stop">Detener</string>
     <string name="rest_seconds">%1$ds</string>
     <string name="rest_channel_progress">Descanso en curso</string>
@@ -133,4 +139,44 @@
     <string name="model_error">Error: %1$s</string>
     <string name="model_or_import">¿Ya tienes el archivo del modelo en el teléfono?</string>
     <string name="model_import_file">Importar modelo desde archivo</string>
+
+    <!-- Muscle groups -->
+    <string name="muscle_chest">Pecho</string>
+    <string name="muscle_back">Espalda</string>
+    <string name="muscle_shoulders">Hombros</string>
+    <string name="muscle_biceps">Bíceps</string>
+    <string name="muscle_triceps">Tríceps</string>
+    <string name="muscle_forearms">Antebrazos</string>
+    <string name="muscle_quads">Cuádriceps</string>
+    <string name="muscle_hamstrings">Isquiotibiales</string>
+    <string name="muscle_glutes">Glúteos</string>
+    <string name="muscle_calves">Pantorrillas</string>
+    <string name="muscle_abs">Abdominales</string>
+    <string name="muscle_full_body">Cuerpo completo</string>
+    <string name="muscle_other">Otro</string>
+
+    <!-- Equipment -->
+    <string name="equipment_barbell">Barra</string>
+    <string name="equipment_dumbbell">Mancuerna</string>
+    <string name="equipment_machine">Máquina</string>
+    <string name="equipment_cable">Polea</string>
+    <string name="equipment_kettlebell">Pesa rusa</string>
+    <string name="equipment_bodyweight">Peso corporal</string>
+    <string name="equipment_band">Banda</string>
+    <string name="equipment_other">Otro</string>
+
+    <!-- Routine splits -->
+    <string name="split_push">Empuje</string>
+    <string name="split_pull">Tirón</string>
+    <string name="split_legs">Pierna</string>
+    <string name="split_upper">Tren superior</string>
+    <string name="split_lower">Tren inferior</string>
+    <string name="split_full_body">Cuerpo completo</string>
+    <string name="split_chest_triceps">Pecho y tríceps</string>
+    <string name="split_back_biceps">Espalda y bíceps</string>
+    <string name="split_shoulders">Hombros</string>
+    <string name="split_arms">Brazos</string>
+    <string name="split_core">Core</string>
+    <string name="split_cardio">Cardio</string>
+    <string name="split_custom">Personalizada</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.ironmind.app.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,10 +43,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.ui.components.AccentButton
+import com.ironmind.app.ui.components.Chip
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.GlowProgressBar
 import com.ironmind.app.ui.components.SectionTitle
-import com.ironmind.app.ui.components.StatTile
+import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
@@ -96,6 +99,8 @@ fun DashboardScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            item { DashboardHeader() }
+
             item { StatsRow(streak = state.streak, totalSessions = state.totalSessions) }
 
             item {
@@ -169,24 +174,88 @@ fun DashboardScreen(
 }
 
 @Composable
+private fun DashboardHeader() {
+    Column {
+        Text(
+            text = stringResource(R.string.dash_engine_label),
+            style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+            color = Gold,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.dash_tagline),
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+            color = TextMuted,
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip(text = stringResource(R.string.badge_on_device_ai), accent = Cyan)
+            Chip(text = stringResource(R.string.badge_offline), accent = Gold)
+        }
+    }
+}
+
+@Composable
 private fun StatsRow(streak: Int, totalSessions: Int) {
-    GlassCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            StatTile(
-                value = stringResource(R.string.dash_streak_value, streak),
-                label = stringResource(R.string.dash_streak_label),
-                modifier = Modifier.weight(1f),
-                valueColor = Gold,
-            )
-            StatTile(
-                value = "$totalSessions",
-                label = stringResource(R.string.dash_sessions_label),
-                modifier = Modifier.weight(1f),
-                valueColor = Cyan,
-            )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        StatBadgeTile(
+            badge = "🔥",
+            value = "$streak",
+            label = stringResource(R.string.dash_streak_label),
+            accent = Gold,
+            modifier = Modifier.weight(1f),
+        )
+        StatBadgeTile(
+            badge = "🏆",
+            value = "$totalSessions",
+            label = stringResource(R.string.dash_sessions_label),
+            accent = Cyan,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun StatBadgeTile(
+    badge: String,
+    value: String,
+    label: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    GlassCard(
+        modifier = modifier,
+        contentPadding = PaddingValues(16.dp),
+        borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(accent.copy(alpha = 0.5f), accent.copy(alpha = 0.15f)),
+        ),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accent.copy(alpha = 0.12f))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            ) {
+                Text(badge, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = value,
+                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = accent,
+                )
+                Text(
+                    text = label,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                    color = TextMuted,
+                )
+            }
         }
     }
 }
@@ -275,7 +344,7 @@ private fun RoutineCard(routine: RoutineProgressUi, onStart: () -> Unit, onEdit:
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(routine.name, style = androidx.compose.material3.MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                SplitChip(label = routine.split.name)
+                SplitChip(label = routine.split.label())
             }
             Text(stringResource(R.string.routine_exercise_count, routine.exerciseCount), color = TextMuted)
         }
