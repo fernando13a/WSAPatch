@@ -23,6 +23,8 @@ Edge / MediaPipe LLM Inference). No account, no backend, no telemetry — everyt
   entirely on your phone.
 - 🌐 **Spanish-first, bilingual.** Full Spanish UI (default) with an English translation; the exercise
   taxonomy (muscle groups, equipment, splits) is localized too.
+- ⚖️ **kg / lb.** Pick your unit in Settings; data is always stored in kg and only the display/input
+  converts, so every weight, chart, 1RM and the plate calculator follow your choice.
 
 ## Tech stack
 

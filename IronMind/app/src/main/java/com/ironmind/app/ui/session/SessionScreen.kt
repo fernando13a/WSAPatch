@@ -59,12 +59,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
+import com.ironmind.app.domain.model.WeightUnit
 import com.ironmind.app.domain.util.computePlatePlan
+import com.ironmind.app.domain.util.displayUnitToKg
+import com.ironmind.app.domain.util.toDisplayUnit
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.CircularRestTimer
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.suffix
+import com.ironmind.app.ui.util.weightLabel
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
@@ -80,6 +85,7 @@ fun SessionScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val restRemaining by viewModel.restRemaining.collectAsStateWithLifecycle()
     val restTotal by viewModel.restTotal.collectAsStateWithLifecycle()
+    val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
 
     // Keep the screen awake during a workout.
     val view = LocalView.current
@@ -147,7 +153,7 @@ fun SessionScreen(
                     val totalSets = state.exerciseBlocks.sumOf { it.sets.size }
                     LabeledValue(stringResource(R.string.session_time), formatMmSs(elapsedSeconds))
                     Spacer(Modifier.height(6.dp))
-                    LabeledValue(stringResource(R.string.session_total_volume), stringResource(R.string.kg_value, state.totalVolume.toInt()))
+                    LabeledValue(stringResource(R.string.session_total_volume), weightLabel(state.totalVolume, weightUnit))
                     Spacer(Modifier.height(6.dp))
                     LabeledValue(stringResource(R.string.session_sets_logged), "$totalSets")
                 }
@@ -165,6 +171,7 @@ fun SessionScreen(
             item {
                 AddSetCard(
                     exercises = state.availableExercises.map { it.id to it.name },
+                    unit = weightUnit,
                     onAddSet = { exerciseId, weight, reps, notes ->
                         viewModel.addSet(exerciseId, weight, reps, notes)
                     },
@@ -176,6 +183,7 @@ fun SessionScreen(
             items(state.exerciseBlocks, key = { it.exerciseId }) { block ->
                 ExerciseBlockCard(
                     block = block,
+                    unit = weightUnit,
                     onEditSet = { editingSet = it },
                     onDeleteSet = viewModel::deleteSet,
                     onOpen = { onOpenExercise(block.exerciseId) },
@@ -187,6 +195,7 @@ fun SessionScreen(
     editingSet?.let { set ->
         EditSetDialog(
             set = set,
+            unit = weightUnit,
             onDismiss = { editingSet = null },
             onSave = { updated ->
                 viewModel.updateSet(updated)
@@ -236,6 +245,7 @@ private fun RestTimerCard(
 @Composable
 private fun AddSetCard(
     exercises: List<Pair<Long, String>>,
+    unit: WeightUnit,
     onAddSet: (exerciseId: Long, weightKg: Double, reps: Int, notes: String?) -> Unit,
 ) {
     var selectedId by remember { mutableLongStateOf(0L) }
@@ -274,7 +284,7 @@ private fun AddSetCard(
             OutlinedTextField(
                 value = weight,
                 onValueChange = { weight = it },
-                label = { Text(stringResource(R.string.weight_kg)) },
+                label = { Text(stringResource(R.string.weight_input_label, unit.suffix())) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
@@ -306,7 +316,7 @@ private fun AddSetCard(
             enabled = selectedId != 0L && weightValue != null && repsValue != null,
             onClick = {
                 if (weightValue != null && repsValue != null) {
-                    onAddSet(selectedId, weightValue, repsValue, notes)
+                    onAddSet(selectedId, weightValue.displayUnitToKg(unit), repsValue, notes)
                     weight = ""
                     reps = ""
                     notes = ""
@@ -321,33 +331,42 @@ private fun AddSetCard(
         ) { Text(stringResource(R.string.plate_calc_open), color = Cyan) }
     }
 
-    if (showPlates && weight.toDoubleOrNull() != null) {
-        PlateDialog(targetKg = weight.toDouble(), onDismiss = { showPlates = false })
+    val plateTargetKg = weight.toDoubleOrNull()?.displayUnitToKg(unit)
+    if (showPlates && plateTargetKg != null) {
+        PlateDialog(targetKg = plateTargetKg, unit = unit, onDismiss = { showPlates = false })
     }
 }
 
 @Composable
-private fun PlateDialog(targetKg: Double, onDismiss: () -> Unit) {
-    val barKg = 20.0
-    val plan = remember(targetKg) { computePlatePlan(targetKg, barKg) }
+private fun PlateDialog(targetKg: Double, unit: WeightUnit, onDismiss: () -> Unit) {
+    // Compute in the display unit with unit-appropriate bar + plate inventory.
+    val target = targetKg.toDisplayUnit(unit)
+    val barWeight = if (unit == WeightUnit.LB) 45.0 else 20.0
+    val plateSet = if (unit == WeightUnit.LB) {
+        listOf(45.0, 35.0, 25.0, 10.0, 5.0, 2.5)
+    } else {
+        listOf(25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25)
+    }
+    val plan = remember(target, unit) { computePlatePlan(target, barWeight, plateSet) }
+    val suffix = unit.suffix()
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = Cyan) }
         },
-        title = { Text(stringResource(R.string.plate_calc_title, targetKg.toInt()), color = Gold) },
+        title = { Text(stringResource(R.string.plate_calc_title, "${target.toInt()} $suffix"), color = Gold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.plate_calc_bar, barKg.toInt()), color = TextMuted)
+                Text(stringResource(R.string.plate_calc_bar, "${barWeight.toInt()} $suffix"), color = TextMuted)
                 if (plan.perSide.isEmpty()) {
                     Text(stringResource(R.string.plate_calc_bar_only), color = Color.White)
                 } else {
                     val perSide = plan.perSide.joinToString(" + ") { formatPlate(it) }
-                    Text(stringResource(R.string.plate_calc_per_side, perSide), color = Color.White)
+                    Text(stringResource(R.string.plate_calc_per_side, "$perSide $suffix"), color = Color.White)
                 }
-                Text(stringResource(R.string.plate_calc_total, plan.achievable.toInt()), color = Cyan)
+                Text(stringResource(R.string.plate_calc_total, "${plan.achievable.toInt()} $suffix"), color = Cyan)
                 if (plan.leftover > 0.01) {
-                    Text(stringResource(R.string.plate_calc_leftover, formatPlate(plan.leftover)), color = TextMuted)
+                    Text(stringResource(R.string.plate_calc_leftover, "${formatPlate(plan.leftover)} $suffix"), color = TextMuted)
                 }
             }
         },
@@ -357,9 +376,15 @@ private fun PlateDialog(targetKg: Double, onDismiss: () -> Unit) {
 private fun formatPlate(kg: Double): String =
     if (kg % 1.0 == 0.0) "${kg.toInt()}" else kg.toString()
 
+/** A clean, editable representation of a weight value (integer if whole, else one decimal).
+ *  Forces a '.' decimal (Locale.US) so the field re-parses regardless of the device locale. */
+private fun formatEditableWeight(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString() else String.format(java.util.Locale.US, "%.1f", value)
+
 @Composable
 private fun ExerciseBlockCard(
     block: ExerciseBlockUi,
+    unit: WeightUnit,
     onEditSet: (SetLog) -> Unit,
     onDeleteSet: (SetLog) -> Unit,
     onOpen: () -> Unit,
@@ -391,7 +416,7 @@ private fun ExerciseBlockCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        stringResource(R.string.set_line, set.setNumber, set.weightKg.toInt(), set.reps),
+                        stringResource(R.string.set_line, set.setNumber, weightLabel(set.weightKg, unit), set.reps),
                         color = Color.White,
                         modifier = Modifier
                             .weight(1f)
@@ -413,10 +438,11 @@ private fun ExerciseBlockCard(
 @Composable
 private fun EditSetDialog(
     set: SetLog,
+    unit: WeightUnit,
     onDismiss: () -> Unit,
     onSave: (SetLog) -> Unit,
 ) {
-    var weight by remember { mutableStateOf(set.weightKg.toString()) }
+    var weight by remember { mutableStateOf(formatEditableWeight(set.weightKg.toDisplayUnit(unit))) }
     var reps by remember { mutableStateOf(set.reps.toString()) }
     var notes by remember { mutableStateOf(set.notes ?: "") }
     val weightValue = weight.toDoubleOrNull()
@@ -429,7 +455,7 @@ private fun EditSetDialog(
                 enabled = weightValue != null && repsValue != null,
                 onClick = {
                     if (weightValue != null && repsValue != null) {
-                        onSave(set.copy(weightKg = weightValue, reps = repsValue, notes = notes.takeIf { it.isNotBlank() }))
+                        onSave(set.copy(weightKg = weightValue.displayUnitToKg(unit), reps = repsValue, notes = notes.takeIf { it.isNotBlank() }))
                     }
                 },
             ) { Text(stringResource(R.string.action_save), color = Cyan) }
@@ -441,7 +467,7 @@ private fun EditSetDialog(
                 OutlinedTextField(
                     value = weight,
                     onValueChange = { weight = it },
-                    label = { Text(stringResource(R.string.weight_kg)) },
+                    label = { Text(stringResource(R.string.weight_input_label, unit.suffix())) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),

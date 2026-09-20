@@ -36,10 +36,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
+import com.ironmind.app.domain.model.WeightUnit
 import com.ironmind.app.domain.util.estimateOneRepMax
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.weightLabel
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.Gold
@@ -47,7 +49,6 @@ import com.ironmind.app.ui.theme.TextMuted
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +57,7 @@ fun ProgressScreen(
     viewModel: ProgressViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
@@ -90,7 +92,7 @@ fun ProgressScreen(
                     } else {
                         val shown = selectedIndex?.let { state.points.getOrNull(it) } ?: state.points.last()
                         Text(
-                            stringResource(R.string.point_label, shown.label, shown.value.toInt()),
+                            stringResource(R.string.point_label, shown.label, weightLabel(shown.value, weightUnit)),
                             color = Cyan,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
@@ -105,11 +107,11 @@ fun ProgressScreen(
                                 .height(200.dp),
                         )
                         Spacer(Modifier.height(12.dp))
-                        LabeledValue(stringResource(R.string.best_mark), stringResource(R.string.kg_value, state.bestWeight.toInt()))
-                        val e1rm = state.history.maxOfOrNull { estimateOneRepMax(it.weightKg, it.reps) }?.roundToInt() ?: 0
-                        if (e1rm > 0) {
+                        LabeledValue(stringResource(R.string.best_mark), weightLabel(state.bestWeight, weightUnit))
+                        val e1rmKg = state.history.maxOfOrNull { estimateOneRepMax(it.weightKg, it.reps) } ?: 0.0
+                        if (e1rmKg > 0.0) {
                             Spacer(Modifier.height(6.dp))
-                            LabeledValue(stringResource(R.string.one_rm_label), stringResource(R.string.kg_value, e1rm))
+                            LabeledValue(stringResource(R.string.one_rm_label), weightLabel(e1rmKg, weightUnit))
                         }
                     }
                 }
@@ -124,14 +126,14 @@ fun ProgressScreen(
             }
 
             items(state.history, key = { it.id }) { set ->
-                HistoryRow(set)
+                HistoryRow(set, weightUnit)
             }
         }
     }
 }
 
 @Composable
-private fun HistoryRow(set: SetLog) {
+private fun HistoryRow(set: SetLog, unit: WeightUnit) {
     GlassCard(contentPadding = PaddingValues(14.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -139,7 +141,7 @@ private fun HistoryRow(set: SetLog) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(formatDate(set.performedAt), color = TextMuted, style = MaterialTheme.typography.labelLarge)
-            val summary = stringResource(R.string.set_summary, set.weightKg.toInt(), set.reps)
+            val summary = stringResource(R.string.set_summary, weightLabel(set.weightKg, unit), set.reps)
             val rpe = set.rpe
             val rpeText = if (rpe != null) stringResource(R.string.rpe_suffix, rpe.toString()) else ""
             Text(

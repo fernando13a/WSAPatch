@@ -5,7 +5,9 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ironmind.app.core.util.DispatcherProvider
+import com.ironmind.app.data.preferences.AppPreferences
 import com.ironmind.app.domain.backup.BackupManager
+import com.ironmind.app.domain.model.WeightUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,11 +21,19 @@ import javax.inject.Inject
 class BackupViewModel @Inject constructor(
     private val backupManager: BackupManager,
     private val dispatchers: DispatcherProvider,
+    private val appPreferences: AppPreferences,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val state: StateFlow<BackupUiState> = _state.asStateFlow()
+
+    /** Preferred weight unit, reactive; changing it re-renders every weight in the app. */
+    val weightUnit: StateFlow<WeightUnit> = appPreferences.weightUnitFlow
+
+    fun setWeightUnit(unit: WeightUnit) {
+        appPreferences.weightUnit = unit
+    }
 
     /** Writes the full-database JSON to the document the user picked. */
     fun export(uri: Uri) {

@@ -3,6 +3,7 @@ package com.ironmind.app.ui.session
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ironmind.app.data.preferences.AppPreferences
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
@@ -28,11 +29,15 @@ import javax.inject.Inject
 class SessionViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val restNotifier: RestTimerNotifier,
+    appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val argSessionId: Long = savedStateHandle[Destinations.ARG_SESSION_ID] ?: 0L
     private val argRoutineId: Long = savedStateHandle[Destinations.ARG_ROUTINE_ID] ?: 0L
+
+    /** The user's preferred display/input weight unit (data stays in kg). */
+    val weightUnit = appPreferences.weightUnitFlow
 
     private val activeSessionId = MutableStateFlow(0L)
 

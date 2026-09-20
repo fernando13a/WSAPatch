@@ -23,7 +23,7 @@ class SessionViewModelTest {
     @Test
     fun noSessionIsCreatedUntilFirstSetIsLogged() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), freeSessionHandle())
+        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), FakeAppPreferences(), freeSessionHandle())
 
         assertEquals(0, repo.startSessionCount)
 
@@ -37,7 +37,7 @@ class SessionViewModelTest {
     @Test
     fun finishSessionWithoutLoggingDoesNotPersistAnything() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
-        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), freeSessionHandle())
+        val vm = SessionViewModel(repo, FakeRestTimerNotifier(), FakeAppPreferences(), freeSessionHandle())
 
         var done = false
         vm.finishSession { done = true }
@@ -51,7 +51,7 @@ class SessionViewModelTest {
     fun restTimerStartsAndStops() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository()
         val notifier = FakeRestTimerNotifier()
-        val vm = SessionViewModel(repo, notifier, freeSessionHandle())
+        val vm = SessionViewModel(repo, notifier, FakeAppPreferences(), freeSessionHandle())
 
         vm.startRest(90)
         assertEquals(90, vm.restRemaining.value)

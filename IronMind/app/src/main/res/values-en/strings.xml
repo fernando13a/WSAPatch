@@ -62,31 +62,34 @@
     <string name="add_set_title">Log set</string>
     <string name="select_exercise">Select exercise</string>
     <string name="weight_kg">Weight (kg)</string>
+    <string name="weight_input_label">Weight (%1$s)</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_lb">lb</string>
     <string name="reps">Reps</string>
     <string name="notes_hint">Notes (supplements, energy…)</string>
     <string name="notes_label">Notes</string>
     <string name="no_sets_yet">No sets yet.</string>
-    <string name="set_line">Set %1$d:  %2$d kg × %3$d</string>
+    <string name="set_line">Set %1$d:  %2$s × %3$d</string>
     <string name="edit_set_title">Edit set %1$d</string>
     <string name="kg_value">%1$d kg</string>
     <string name="plate_calc_open">Plate calculator 🏋️</string>
-    <string name="plate_calc_title">Plates for %1$d kg</string>
-    <string name="plate_calc_bar">Olympic bar: %1$d kg</string>
+    <string name="plate_calc_title">Plates for %1$s</string>
+    <string name="plate_calc_bar">Olympic bar: %1$s</string>
     <string name="plate_calc_bar_only">Just the bar, no plates.</string>
-    <string name="plate_calc_per_side">Per side: %1$s kg</string>
-    <string name="plate_calc_total">Actual total: %1$d kg</string>
-    <string name="plate_calc_leftover">Short by %1$s kg (outside the plate set).</string>
+    <string name="plate_calc_per_side">Per side: %1$s</string>
+    <string name="plate_calc_total">Actual total: %1$s</string>
+    <string name="plate_calc_leftover">Short by %1$s (outside the plate set).</string>
 
     <!-- Progress -->
     <string name="progress_title">Progress</string>
     <string name="load_evolution">Load evolution</string>
     <string name="no_chart_data">Not enough data to chart yet.</string>
-    <string name="point_label">%1$s · %2$d kg</string>
+    <string name="point_label">%1$s · %2$s</string>
     <string name="best_mark">Best</string>
     <string name="one_rm_label">Est. 1RM</string>
     <string name="history_title">History</string>
     <string name="no_records">No records yet.</string>
-    <string name="set_summary">%1$d kg × %2$d</string>
+    <string name="set_summary">%1$s × %2$d</string>
     <string name="rpe_suffix">  ·  RPE %1$s</string>
 
     <!-- Routine editor -->
@@ -111,8 +114,14 @@
     <string name="muscle_group_label">Muscle group</string>
     <string name="equipment_label">Equipment</string>
 
+    <!-- Settings: units -->
+    <string name="settings_units_title">Units</string>
+    <string name="settings_units_desc">Choose how you see and enter weight. Your data is always stored in kg; this only changes the display.</string>
+    <string name="unit_kg_name">Kilograms (kg)</string>
+    <string name="unit_lb_name">Pounds (lb)</string>
+
     <!-- Data backup / restore -->
-    <string name="backup_title">Data</string>
+    <string name="backup_title">Settings</string>
     <string name="backup_filename">ironmind-backup.json</string>
     <string name="backup_export_title">Export backup</string>
     <string name="backup_export_desc">Save all your data (exercises, routines, sessions and sets) to a JSON file you can keep or move to another device. Everything happens on your phone.</string>

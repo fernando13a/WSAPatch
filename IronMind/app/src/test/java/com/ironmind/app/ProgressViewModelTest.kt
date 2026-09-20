@@ -33,7 +33,7 @@ class ProgressViewModelTest {
             SetLog(id = 2, sessionId = 2, exerciseId = 1, setNumber = 1, weightKg = 110.0, reps = 5, performedAt = dayTwo),
         )
 
-        val vm = ProgressViewModel(repo, SavedStateHandle(mapOf(Destinations.ARG_EXERCISE_ID to 1L)))
+        val vm = ProgressViewModel(repo, FakeAppPreferences(), SavedStateHandle(mapOf(Destinations.ARG_EXERCISE_ID to 1L)))
         val state = vm.uiState.first { !it.isLoading }
 
         assertEquals("Squat", state.exerciseName)

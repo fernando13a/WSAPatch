@@ -3,6 +3,7 @@ package com.ironmind.app.ui.progress
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ironmind.app.data.preferences.AppPreferences
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,8 +26,12 @@ import javax.inject.Inject
 @HiltViewModel
 class ProgressViewModel @Inject constructor(
     private val repository: WorkoutRepository,
+    appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    /** The user's preferred display weight unit (data stays in kg). */
+    val weightUnit = appPreferences.weightUnitFlow
 
     private val argExerciseId: Long = savedStateHandle[Destinations.ARG_EXERCISE_ID] ?: 0L
     private val zone: ZoneId = ZoneId.systemDefault()
