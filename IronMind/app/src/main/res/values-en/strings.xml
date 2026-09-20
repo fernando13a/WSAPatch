@@ -51,6 +51,7 @@
     <string name="rest_title">Rest</string>
     <string name="rest_dial_active">REST</string>
     <string name="rest_dial_ready">READY</string>
+    <string name="rest_dial_cd">Rest: %1$s remaining</string>
     <string name="rest_stop">Stop</string>
     <string name="rest_seconds">%1$ds</string>
     <string name="rest_channel_progress">Rest in progress</string>
@@ -68,6 +69,13 @@
     <string name="set_line">Set %1$d:  %2$d kg × %3$d</string>
     <string name="edit_set_title">Edit set %1$d</string>
     <string name="kg_value">%1$d kg</string>
+    <string name="plate_calc_open">Plate calculator 🏋️</string>
+    <string name="plate_calc_title">Plates for %1$d kg</string>
+    <string name="plate_calc_bar">Olympic bar: %1$d kg</string>
+    <string name="plate_calc_bar_only">Just the bar, no plates.</string>
+    <string name="plate_calc_per_side">Per side: %1$s kg</string>
+    <string name="plate_calc_total">Actual total: %1$d kg</string>
+    <string name="plate_calc_leftover">Short by %1$s kg (outside the plate set).</string>
 
     <!-- Progress -->
     <string name="progress_title">Progress</string>
@@ -75,6 +83,7 @@
     <string name="no_chart_data">Not enough data to chart yet.</string>
     <string name="point_label">%1$s · %2$d kg</string>
     <string name="best_mark">Best</string>
+    <string name="one_rm_label">Est. 1RM</string>
     <string name="history_title">History</string>
     <string name="no_records">No records yet.</string>
     <string name="set_summary">%1$d kg × %2$d</string>
@@ -91,6 +100,10 @@
     <string name="add_exercise_title">Add exercise</string>
     <string name="no_more_catalog">No more exercises in the catalog.</string>
     <string name="select_from_catalog">Select from catalog</string>
+    <string name="catalog_search_hint">Search exercise…</string>
+    <string name="filter_all_muscles">All muscle groups</string>
+    <string name="catalog_no_results">No results. Try another term or muscle group.</string>
+    <string name="catalog_more_results">+%1$d more — refine your search</string>
     <string name="create_new_exercise">+ Create new exercise</string>
     <string name="save_routine">Save routine</string>
     <string name="new_exercise_title">New exercise</string>
@@ -123,6 +136,7 @@
     <string name="reference_image_add">Add image</string>
     <string name="reference_image_replace">Replace image</string>
     <string name="reference_image_demo_note">Demo image (public domain). Downloaded once, then cached. You can replace it with your own.</string>
+    <string name="reference_image_offline">Couldn\'t load the image (offline). It\'ll show once you\'re back online, or attach your own.</string>
 
     <!-- Model download -->
     <string name="model_title">AI model</string>
@@ -138,6 +152,11 @@
     <string name="model_error">Error: %1$s</string>
     <string name="model_or_import">Already have the model file on your phone?</string>
     <string name="model_import_file">Import model from file</string>
+    <string name="model_resume_hint">If the download is interrupted, retrying resumes where it left off.</string>
+    <string name="model_size_on_disk">Using %1$d MB on the device.</string>
+    <string name="model_delete">Delete model</string>
+    <string name="model_delete_confirm_title">Delete the model?</string>
+    <string name="model_delete_confirm_body">You\'ll free up space, but the AI coach will stop working until you download or import it again.</string>
 
     <!-- Muscle groups -->
     <string name="muscle_chest">Chest</string>

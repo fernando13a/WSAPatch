@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
+import com.ironmind.app.domain.util.estimateOneRepMax
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
@@ -46,6 +47,7 @@ import com.ironmind.app.ui.theme.TextMuted
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,6 +106,11 @@ fun ProgressScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                         LabeledValue(stringResource(R.string.best_mark), stringResource(R.string.kg_value, state.bestWeight.toInt()))
+                        val e1rm = state.history.maxOfOrNull { estimateOneRepMax(it.weightKg, it.reps) }?.roundToInt() ?: 0
+                        if (e1rm > 0) {
+                            Spacer(Modifier.height(6.dp))
+                            LabeledValue(stringResource(R.string.one_rm_label), stringResource(R.string.kg_value, e1rm))
+                        }
                     }
                 }
             }

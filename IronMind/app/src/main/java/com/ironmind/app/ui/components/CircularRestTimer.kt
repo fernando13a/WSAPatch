@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,19 @@ fun CircularRestTimer(
     val running = remaining > 0
     val arcBrush = Brush.sweepGradient(listOf(Cyan, Gold, Cyan))
 
-    Box(modifier = modifier.size(diameter), contentAlignment = Alignment.Center) {
+    // One coherent spoken description instead of the raw "00:30" / "DESCANSO" texts.
+    val spoken = if (running) {
+        stringResource(R.string.rest_dial_cd, formatMmSs(remaining))
+    } else {
+        stringResource(R.string.rest_dial_ready)
+    }
+
+    Box(
+        modifier = modifier
+            .size(diameter)
+            .clearAndSetSemantics { contentDescription = spoken },
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(modifier = Modifier.size(diameter)) {
             val strokePx = stroke.toPx()
             val inset = strokePx / 2f

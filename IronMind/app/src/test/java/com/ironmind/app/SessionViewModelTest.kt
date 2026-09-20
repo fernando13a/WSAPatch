@@ -55,11 +55,14 @@ class SessionViewModelTest {
 
         vm.startRest(90)
         assertEquals(90, vm.restRemaining.value)
+        // The total is recorded so the UI dial can render a proportional countdown.
+        assertEquals(90, vm.restTotal.value)
         // Starting a rest posts the initial countdown to the notification.
         assertEquals(90, notifier.countdownValues.first())
 
         vm.stopRest()
         assertEquals(0, vm.restRemaining.value)
+        assertEquals(0, vm.restTotal.value)
         // Stopping clears the notification and never fires the completion alert.
         assertEquals(1, notifier.cancelCount)
         assertEquals(0, notifier.completeCount)

@@ -50,4 +50,13 @@ class ModelDownloadViewModel @Inject constructor(
             downloader.importFromFile(uri).collect { _state.value = it }
         }
     }
+
+    /** Model size on disk in bytes (0 if not present) — for the "free up space" affordance. */
+    fun modelSizeBytes(): Long = downloader.modelSizeBytes()
+
+    /** Deletes the on-device model to reclaim storage, returning the screen to the idle state. */
+    fun deleteModel() {
+        downloader.deleteModel()
+        _state.value = ModelDownloadState.Idle
+    }
 }

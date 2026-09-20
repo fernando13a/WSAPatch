@@ -59,6 +59,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SetLog
+import com.ironmind.app.domain.util.computePlatePlan
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.CircularRestTimer
 import com.ironmind.app.ui.components.GlassCard
@@ -242,6 +243,7 @@ private fun AddSetCard(
     var weight by remember { mutableStateOf("") }
     var reps by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var showPlates by remember { mutableStateOf(false) }
 
     // Default the selector to the first available exercise once loaded.
     LaunchedEffect(exercises) {
@@ -311,8 +313,49 @@ private fun AddSetCard(
                 }
             },
         )
+
+        TextButton(
+            onClick = { showPlates = true },
+            enabled = weightValue != null,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) { Text(stringResource(R.string.plate_calc_open), color = Cyan) }
+    }
+
+    if (showPlates && weight.toDoubleOrNull() != null) {
+        PlateDialog(targetKg = weight.toDouble(), onDismiss = { showPlates = false })
     }
 }
+
+@Composable
+private fun PlateDialog(targetKg: Double, onDismiss: () -> Unit) {
+    val barKg = 20.0
+    val plan = remember(targetKg) { computePlatePlan(targetKg, barKg) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = Cyan) }
+        },
+        title = { Text(stringResource(R.string.plate_calc_title, targetKg.toInt()), color = Gold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.plate_calc_bar, barKg.toInt()), color = TextMuted)
+                if (plan.perSide.isEmpty()) {
+                    Text(stringResource(R.string.plate_calc_bar_only), color = Color.White)
+                } else {
+                    val perSide = plan.perSide.joinToString(" + ") { formatPlate(it) }
+                    Text(stringResource(R.string.plate_calc_per_side, perSide), color = Color.White)
+                }
+                Text(stringResource(R.string.plate_calc_total, plan.achievable.toInt()), color = Cyan)
+                if (plan.leftover > 0.01) {
+                    Text(stringResource(R.string.plate_calc_leftover, formatPlate(plan.leftover)), color = TextMuted)
+                }
+            }
+        },
+    )
+}
+
+private fun formatPlate(kg: Double): String =
+    if (kg % 1.0 == 0.0) "${kg.toInt()}" else kg.toString()
 
 @Composable
 private fun ExerciseBlockCard(

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -52,6 +54,7 @@ fun ModelDownloadScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var url by remember { mutableStateOf(viewModel.defaultUrl) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -95,12 +98,20 @@ fun ModelDownloadScreen(
                 Spacer(Modifier.height(16.dp))
 
                 when (val s = state) {
-                    ModelDownloadState.Idle -> AccentButton(
-                        text = stringResource(R.string.ai_download_model),
-                        enabled = url.isNotBlank(),
-                        onClick = { viewModel.download(url) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    ModelDownloadState.Idle -> Column {
+                        AccentButton(
+                            text = stringResource(R.string.ai_download_model),
+                            enabled = url.isNotBlank(),
+                            onClick = { viewModel.download(url) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.model_resume_hint),
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
 
                     is ModelDownloadState.Downloading -> Column {
                         Text(
@@ -114,8 +125,21 @@ fun ModelDownloadScreen(
 
                     ModelDownloadState.Ready -> Column {
                         Text(stringResource(R.string.model_ready), color = Cyan, fontWeight = FontWeight.SemiBold)
+                        val mb = viewModel.modelSizeBytes() / (1024 * 1024)
+                        if (mb > 0) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.model_size_on_disk, mb),
+                                color = TextMuted,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         AccentButton(text = stringResource(R.string.action_back), onClick = onBack, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.model_delete), color = Color(0xFFFF6B6B))
+                        }
                     }
 
                     is ModelDownloadState.Error -> Column {
@@ -143,5 +167,24 @@ fun ModelDownloadScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    viewModel.deleteModel()
+                }) { Text(stringResource(R.string.model_delete), color = Color(0xFFFF6B6B)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.action_cancel), color = TextMuted)
+                }
+            },
+            title = { Text(stringResource(R.string.model_delete_confirm_title), color = Gold) },
+            text = { Text(stringResource(R.string.model_delete_confirm_body), color = TextMuted) },
+        )
     }
 }

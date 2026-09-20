@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,17 +31,20 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
@@ -138,8 +143,10 @@ fun ExerciseDetailScreen(
                         }
                     }
                     demoUrl != null -> {
-                        // Public-domain demo image, loaded on demand and cached by Coil.
-                        AsyncImage(
+                        // Public-domain demo image, loaded on demand and cached by Coil. It shows a
+                        // spinner while loading and a graceful offline note if the fetch fails (the
+                        // app is offline-first, so the network image may not be reachable).
+                        SubcomposeAsyncImage(
                             model = ImageRequest.Builder(context).data(demoUrl).crossfade(true).build(),
                             imageLoader = imageLoader,
                             contentDescription = stringResource(R.string.reference_image_cd),
@@ -148,6 +155,21 @@ fun ExerciseDetailScreen(
                                 .fillMaxWidth()
                                 .height(220.dp)
                                 .clip(RoundedCornerShape(16.dp)),
+                            loading = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Cyan, strokeWidth = 2.dp)
+                                }
+                            },
+                            error = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        stringResource(R.string.reference_image_offline),
+                                        color = TextMuted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            },
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(

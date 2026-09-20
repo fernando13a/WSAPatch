@@ -14,9 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,6 +53,7 @@ import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.filterExercises
 import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
@@ -66,6 +69,8 @@ fun RoutineEditScreen(
 ) {
     val state by viewModel.ui.collectAsStateWithLifecycle()
     var showNewExercise by remember { mutableStateOf(false) }
+    var catalogQuery by remember { mutableStateOf("") }
+    var muscleFilter by remember { mutableStateOf<MuscleGroup?>(null) }
 
     Scaffold(
         containerColor = Black,
@@ -155,13 +160,61 @@ fun RoutineEditScreen(
                 if (state.addable.isEmpty()) {
                     Text(stringResource(R.string.no_more_catalog), color = TextMuted)
                 } else {
-                    EnumDropdown(
-                        current = stringResource(R.string.select_from_catalog),
-                        options = state.addable.map { it.name },
-                        onSelect = { name -> state.addable.firstOrNull { it.name == name }?.let(viewModel::addExercise) },
+                    OutlinedTextField(
+                        value = catalogQuery,
+                        onValueChange = { catalogQuery = it },
+                        label = { Text(stringResource(R.string.catalog_search_hint)) },
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = TextMuted) },
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                    Spacer(Modifier.height(8.dp))
+                    LabeledDropdown(
+                        currentLabel = muscleFilter?.label() ?: stringResource(R.string.filter_all_muscles),
+                        options = listOf<MuscleGroup?>(null) + MuscleGroup.entries,
+                        optionLabel = { it?.label() ?: stringResource(R.string.filter_all_muscles) },
+                        onSelect = { muscleFilter = it },
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    val results = filterExercises(state.addable, catalogQuery, muscleFilter)
+                    if (results.isEmpty()) {
+                        Text(stringResource(R.string.catalog_no_results), color = TextMuted)
+                    } else {
+                        results.take(MAX_CATALOG_RESULTS).forEach { exercise ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.addExercise(exercise) },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(exercise.name)
+                                    Text(
+                                        exercise.muscleGroup.label(),
+                                        color = TextMuted,
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                }
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = stringResource(R.string.add_exercise_title),
+                                    tint = Cyan,
+                                )
+                            }
+                        }
+                        if (results.size > MAX_CATALOG_RESULTS) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.catalog_more_results, results.size - MAX_CATALOG_RESULTS),
+                                color = TextMuted,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedButton(onClick = { showNewExercise = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.create_new_exercise), color = Gold)
                 }
@@ -187,23 +240,8 @@ fun RoutineEditScreen(
     }
 }
 
-@Composable
-private fun EnumDropdown(current: String, options: List<String>, onSelect: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(current, color = Cyan)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
-                DropdownMenuItem(text = { Text(option) }, onClick = {
-                    onSelect(option)
-                    expanded = false
-                })
-            }
-        }
-    }
-}
+/** Cap the catalog result list so the picker never becomes an unbounded wall of rows. */
+private const val MAX_CATALOG_RESULTS = 40
 
 /** A dropdown that shows a localized label per option while selecting by the underlying value. */
 @Composable

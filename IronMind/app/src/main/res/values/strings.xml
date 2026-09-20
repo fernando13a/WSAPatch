@@ -52,6 +52,7 @@
     <string name="rest_title">Descanso</string>
     <string name="rest_dial_active">DESCANSO</string>
     <string name="rest_dial_ready">LISTO</string>
+    <string name="rest_dial_cd">Descanso: %1$s restante</string>
     <string name="rest_stop">Detener</string>
     <string name="rest_seconds">%1$ds</string>
     <string name="rest_channel_progress">Descanso en curso</string>
@@ -69,6 +70,13 @@
     <string name="set_line">Set %1$d:  %2$d kg × %3$d</string>
     <string name="edit_set_title">Editar set %1$d</string>
     <string name="kg_value">%1$d kg</string>
+    <string name="plate_calc_open">Calcular discos 🏋️</string>
+    <string name="plate_calc_title">Discos para %1$d kg</string>
+    <string name="plate_calc_bar">Barra olímpica: %1$d kg</string>
+    <string name="plate_calc_bar_only">Solo la barra, sin discos.</string>
+    <string name="plate_calc_per_side">Por lado: %1$s kg</string>
+    <string name="plate_calc_total">Total real: %1$d kg</string>
+    <string name="plate_calc_leftover">Faltan %1$s kg (fuera del juego de discos).</string>
 
     <!-- Progress -->
     <string name="progress_title">Progreso</string>
@@ -76,6 +84,7 @@
     <string name="no_chart_data">Aún no hay datos suficientes para graficar.</string>
     <string name="point_label">%1$s · %2$d kg</string>
     <string name="best_mark">Mejor marca</string>
+    <string name="one_rm_label">1RM estimado</string>
     <string name="history_title">Historial</string>
     <string name="no_records">Sin registros todavía.</string>
     <string name="set_summary">%1$d kg × %2$d</string>
@@ -92,6 +101,10 @@
     <string name="add_exercise_title">Añadir ejercicio</string>
     <string name="no_more_catalog">No hay más ejercicios en el catálogo.</string>
     <string name="select_from_catalog">Seleccionar del catálogo</string>
+    <string name="catalog_search_hint">Buscar ejercicio…</string>
+    <string name="filter_all_muscles">Todos los grupos</string>
+    <string name="catalog_no_results">Sin resultados. Prueba otro término o grupo muscular.</string>
+    <string name="catalog_more_results">+%1$d más — refina la búsqueda</string>
     <string name="create_new_exercise">+ Crear ejercicio nuevo</string>
     <string name="save_routine">Guardar rutina</string>
     <string name="new_exercise_title">Nuevo ejercicio</string>
@@ -124,6 +137,7 @@
     <string name="reference_image_add">Añadir imagen</string>
     <string name="reference_image_replace">Cambiar imagen</string>
     <string name="reference_image_demo_note">Imagen de demostración (dominio público). Se descarga una vez y queda en caché. Puedes reemplazarla por la tuya.</string>
+    <string name="reference_image_offline">No se pudo cargar la imagen (sin conexión). Se mostrará al reconectar, o adjunta la tuya.</string>
 
     <!-- Model download -->
     <string name="model_title">Modelo de IA</string>
@@ -139,6 +153,11 @@
     <string name="model_error">Error: %1$s</string>
     <string name="model_or_import">¿Ya tienes el archivo del modelo en el teléfono?</string>
     <string name="model_import_file">Importar modelo desde archivo</string>
+    <string name="model_resume_hint">Si la descarga se interrumpe, se reanuda donde quedó al reintentar.</string>
+    <string name="model_size_on_disk">Ocupa %1$d MB en el dispositivo.</string>
+    <string name="model_delete">Borrar modelo</string>
+    <string name="model_delete_confirm_title">¿Borrar el modelo?</string>
+    <string name="model_delete_confirm_body">Liberarás espacio, pero el coach IA dejará de funcionar hasta que vuelvas a descargarlo o importarlo.</string>
 
     <!-- Muscle groups -->
     <string name="muscle_chest">Pecho</string>
