@@ -11,6 +11,7 @@ val Gold = Color(0xFFFFD700)
 val Cyan = Color(0xFF00FFFF)
 
 // Glassmorphism helpers
-val GlassFill = Color(0x14FFFFFF)     // ~8% white — frosted panel fill
-val GlassBorder = Color(0x33FFFFFF)   // ~20% white — subtle glass edge
-val TextMuted = Color(0xFFB3B3B3)
+val GlassFill = Color(0x0DFFFFFF)     // ~5% white — frosted panel fill (Kinetic Glass Obsidian)
+val GlassBorder = Color(0x1FFFFFFF)   // ~12% white — idle glass edge
+val TextMuted = Color(0xFF8E8E93)     // muted support text
+val TextDisabled = Color(0xFF48484A)  // passive / disabled text
