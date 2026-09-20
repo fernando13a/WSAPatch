@@ -7,6 +7,7 @@ import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.usecase.GetProgressionSuggestionUseCase
+import com.ironmind.app.domain.usecase.GetTrainingInsightsUseCase
 import com.ironmind.app.domain.util.StreakCalculator
 import com.ironmind.app.ui.util.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +26,7 @@ import kotlin.time.Duration.Companion.days
 class DashboardViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val getProgressionSuggestion: GetProgressionSuggestionUseCase,
+    private val getTrainingInsights: GetTrainingInsightsUseCase,
     private val llmInferenceService: LlmInferenceService,
     private val appPreferences: AppPreferences,
 ) : ViewModel() {
@@ -110,5 +112,23 @@ class DashboardViewModel @Inject constructor(
     fun dismissSuggestion() {
         suggestionJob?.cancel()
         _suggestion.value = null
+    }
+
+    private val _insights = MutableStateFlow<SuggestionState?>(null)
+    val insights: StateFlow<SuggestionState?> = _insights.asStateFlow()
+
+    private var insightsJob: Job? = null
+
+    /** Streams an AI cross-exercise training-trends summary into [insights]. */
+    fun generateInsights() {
+        insightsJob?.cancel()
+        insightsJob = viewModelScope.launch {
+            getTrainingInsights().collect { state -> _insights.value = state }
+        }
+    }
+
+    fun dismissInsights() {
+        insightsJob?.cancel()
+        _insights.value = null
     }
 }

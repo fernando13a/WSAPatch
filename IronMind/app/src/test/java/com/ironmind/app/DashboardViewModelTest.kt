@@ -11,6 +11,7 @@ import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.usecase.GetProgressionSuggestionUseCase
+import com.ironmind.app.domain.usecase.GetTrainingInsightsUseCase
 import com.ironmind.app.ui.dashboard.DashboardViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -39,7 +40,13 @@ class DashboardViewModelTest {
     }
 
     private fun viewModel(repo: FakeWorkoutRepository, llm: FakeLlmInferenceService) =
-        DashboardViewModel(repo, GetProgressionSuggestionUseCase(repo, llm), llm, FakeAppPreferences())
+        DashboardViewModel(
+            repo,
+            GetProgressionSuggestionUseCase(repo, llm),
+            GetTrainingInsightsUseCase(repo, llm),
+            llm,
+            FakeAppPreferences(),
+        )
 
     @Test
     fun uiState_computesStreakSessionsRoutineProgressAndFocus() = runTest(mainRule.dispatcher) {
@@ -86,5 +93,29 @@ class DashboardViewModelTest {
         val result = vm.suggestion.value
         assertTrue(result is SuggestionState.Success && result.isComplete)
         assertEquals("ok", (result as SuggestionState.Success).suggestion)
+    }
+
+    @Test
+    fun generateInsightsStreamsIntoState() = runTest(mainRule.dispatcher) {
+        val repo = repositoryWithOneSession()
+        repo.recentActivity = repo.recentSetLogs
+        val vm = viewModel(repo, FakeLlmInferenceService(chunks = listOf("ok")))
+
+        vm.generateInsights()
+
+        val result = vm.insights.value
+        assertTrue(result is SuggestionState.Success && result.isComplete)
+        assertEquals("ok", (result as SuggestionState.Success).suggestion)
+    }
+
+    @Test
+    fun generateInsights_emitsErrorWithNoRecentActivity() = runTest(mainRule.dispatcher) {
+        val repo = repositoryWithOneSession()
+        repo.recentActivity = emptyList()
+        val vm = viewModel(repo, FakeLlmInferenceService())
+
+        vm.generateInsights()
+
+        assertTrue(vm.insights.value is SuggestionState.Error)
     }
 }

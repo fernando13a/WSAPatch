@@ -68,6 +68,7 @@ fun DashboardScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val suggestion by viewModel.suggestion.collectAsStateWithLifecycle()
+    val insights by viewModel.insights.collectAsStateWithLifecycle()
     val modelAvailable by viewModel.modelAvailable.collectAsStateWithLifecycle()
     val showModelPrompt by viewModel.showModelPrompt.collectAsStateWithLifecycle()
 
@@ -114,6 +115,16 @@ fun DashboardScreen(
                     onOpenProgress = onOpenProgress,
                     onDownloadModel = onDownloadModel,
                 )
+            }
+
+            if (modelAvailable) {
+                item {
+                    TrainingInsightsPanel(
+                        insights = insights,
+                        onGenerate = viewModel::generateInsights,
+                        onDismiss = viewModel::dismissInsights,
+                    )
+                }
             }
 
             item {
@@ -331,6 +342,57 @@ private fun AiSuggestionPanel(
 
         TextButton(onClick = { onOpenProgress(focusExerciseId) }) {
             Text(stringResource(R.string.ai_view_progress), color = Cyan)
+        }
+    }
+}
+
+@Composable
+private fun TrainingInsightsPanel(
+    insights: SuggestionState?,
+    onGenerate: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    GlassCard(
+        borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(Gold.copy(alpha = 0.55f), Cyan.copy(alpha = 0.35f)),
+        ),
+    ) {
+        SectionTitle(stringResource(R.string.insights_title), accent = Gold)
+        Spacer(Modifier.height(12.dp))
+
+        when (val s = insights) {
+            null -> {
+                Text(stringResource(R.string.insights_hint), color = TextMuted)
+                Spacer(Modifier.height(12.dp))
+                AccentButton(text = stringResource(R.string.insights_generate), onClick = onGenerate)
+            }
+
+            SuggestionState.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.insights_analyzing), color = TextMuted)
+            }
+
+            is SuggestionState.Success -> Column {
+                Text(s.suggestion, color = Color.White)
+                if (s.isComplete) {
+                    Row {
+                        TextButton(onClick = onGenerate) {
+                            Text(stringResource(R.string.ai_regenerate), color = Cyan)
+                        }
+                        TextButton(onClick = onDismiss) {
+                            Text(stringResource(R.string.action_close), color = TextMuted)
+                        }
+                    }
+                }
+            }
+
+            is SuggestionState.Error -> Column {
+                Text(s.message, color = ErrorRed)
+                TextButton(onClick = onGenerate) {
+                    Text(stringResource(R.string.action_retry), color = Cyan)
+                }
+            }
         }
     }
 }

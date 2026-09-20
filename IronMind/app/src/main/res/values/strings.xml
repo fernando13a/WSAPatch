@@ -35,6 +35,10 @@
     <string name="ai_analyzing">Analizando tu progreso…</string>
     <string name="ai_regenerate">Regenerar</string>
     <string name="ai_view_progress">Ver progreso de este ejercicio</string>
+    <string name="insights_title">Insights de las últimas 4 semanas</string>
+    <string name="insights_generate">Analizar</string>
+    <string name="insights_analyzing">Analizando tus últimas semanas…</string>
+    <string name="insights_hint">Tendencias de volumen, RPE y 1RM estimado, calculadas de tu historial reciente.</string>
     <string name="routines_title">Rutinas</string>
     <string name="routines_new">+ Nueva</string>
     <string name="routines_empty">Aún no tienes rutinas. Empieza una sesión libre y registra tus ejercicios.</string>
