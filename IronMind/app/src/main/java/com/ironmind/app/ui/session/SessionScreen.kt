@@ -69,6 +69,7 @@ import com.ironmind.app.ui.components.CircularRestTimer
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.displayName
 import com.ironmind.app.ui.util.suffix
 import com.ironmind.app.ui.util.weightLabel
 import com.ironmind.app.ui.theme.Black
@@ -171,7 +172,7 @@ fun SessionScreen(
 
             item {
                 AddSetCard(
-                    exercises = state.availableExercises.map { it.id to it.name },
+                    exercises = state.availableExercises.map { it.id to it.displayName() },
                     unit = weightUnit,
                     onAddSet = { exerciseId, weight, reps, notes ->
                         viewModel.addSet(exerciseId, weight, reps, notes)

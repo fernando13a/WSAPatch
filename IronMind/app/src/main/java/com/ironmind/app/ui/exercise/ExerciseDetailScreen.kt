@@ -52,6 +52,7 @@ import com.ironmind.app.R
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.displayName
 import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.theme.Black
 import com.ironmind.app.ui.theme.Cyan
@@ -89,7 +90,7 @@ fun ExerciseDetailScreen(
         containerColor = Black,
         topBar = {
             TopAppBar(
-                title = { Text(exercise?.name ?: "", color = Gold, fontWeight = FontWeight.Bold) },
+                title = { Text(exercise?.displayName() ?: "", color = Gold, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)

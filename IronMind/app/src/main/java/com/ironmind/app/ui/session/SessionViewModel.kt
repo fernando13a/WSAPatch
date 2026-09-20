@@ -9,6 +9,7 @@ import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.notification.RestTimerNotifier
 import com.ironmind.app.ui.navigation.Destinations
+import com.ironmind.app.ui.util.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -73,7 +74,7 @@ class SessionViewModel @Inject constructor(
         repository.observeExercises(),
         routinePlanFlow,
     ) { detail, exercises, plan ->
-        val names = exercises.associate { it.id to it.name }
+        val names = exercises.associate { it.id to it.displayName() }
         val setsByExercise = (detail?.sets ?: emptyList()).groupBy { it.exerciseId }
 
         val orderedIds = buildList {

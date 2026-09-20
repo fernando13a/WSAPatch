@@ -53,6 +53,7 @@ import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.displayName
 import com.ironmind.app.ui.util.filterExercises
 import com.ironmind.app.ui.util.label
 import com.ironmind.app.ui.theme.Black
@@ -135,7 +136,7 @@ fun RoutineEditScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                stringResource(R.string.numbered_exercise, index + 1, exercise.name),
+                                stringResource(R.string.numbered_exercise, index + 1, exercise.displayName()),
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable { onOpenExercise(exercise.id) },
@@ -190,7 +191,7 @@ fun RoutineEditScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(exercise.name)
+                                    Text(exercise.displayName())
                                     Text(
                                         exercise.muscleGroup.label(),
                                         color = TextMuted,
