@@ -7,10 +7,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ironmind.app.core.util.DispatcherProvider
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.repository.WorkoutRepository
+import com.ironmind.app.domain.usecase.GetTechniqueCoachingUseCase
 import com.ironmind.app.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +27,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ExerciseDetailViewModel @Inject constructor(
     private val repository: WorkoutRepository,
+    private val getTechniqueCoaching: GetTechniqueCoachingUseCase,
     private val dispatchers: DispatcherProvider,
     @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
@@ -44,6 +48,26 @@ class ExerciseDetailViewModel @Inject constructor(
                 _alternatives.value = repository.getAlternatives(exerciseId)
             }
         }
+    }
+
+    // ---- Technique coach --------------------------------------------------------------
+    private val _techniqueAdvice = MutableStateFlow<SuggestionState?>(null)
+    val techniqueAdvice: StateFlow<SuggestionState?> = _techniqueAdvice.asStateFlow()
+
+    private var techniqueJob: Job? = null
+
+    /** Streams AI technique/safety coaching for this exercise into [techniqueAdvice]. */
+    fun generateTechniqueCoaching() {
+        if (exerciseId == 0L) return
+        techniqueJob?.cancel()
+        techniqueJob = viewModelScope.launch {
+            getTechniqueCoaching(exerciseId).collect { state -> _techniqueAdvice.value = state }
+        }
+    }
+
+    fun dismissTechniqueCoaching() {
+        techniqueJob?.cancel()
+        _techniqueAdvice.value = null
     }
 
     /** Copies the picked image into app storage and links it to this exercise. */

@@ -166,6 +166,10 @@
     <string name="instructions_empty">No guide yet for this exercise. You can attach a reference image above.</string>
     <string name="alternatives_title">Alternatives</string>
     <string name="alternatives_empty">No alternatives with different equipment for this muscle group.</string>
+    <string name="technique_coach_title">Technique coach</string>
+    <string name="technique_coach_hint">Ask the AI about common mistakes, safety, and variations for this exercise.</string>
+    <string name="technique_coach_generate">Ask</string>
+    <string name="technique_coach_analyzing">Analyzing technique…</string>
     <string name="reference_image_title">Reference image</string>
     <string name="reference_image_cd">Exercise reference image</string>
     <string name="reference_image_hint">Attach your own photo or GIF to remember the technique or equipment. It stays on your device.</string>

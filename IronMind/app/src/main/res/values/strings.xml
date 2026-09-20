@@ -168,6 +168,10 @@
     <string name="instructions_empty">Aún no hay guía para este ejercicio. Puedes adjuntar una imagen de referencia arriba.</string>
     <string name="alternatives_title">Alternativas</string>
     <string name="alternatives_empty">No hay alternativas con otro equipo para este grupo muscular.</string>
+    <string name="technique_coach_title">Coach de técnica</string>
+    <string name="technique_coach_hint">Pregúntale a la IA sobre errores comunes, seguridad y variantes de este ejercicio.</string>
+    <string name="technique_coach_generate">Preguntar</string>
+    <string name="technique_coach_analyzing">Analizando la técnica…</string>
     <string name="reference_image_title">Imagen de referencia</string>
     <string name="reference_image_cd">Imagen de referencia del ejercicio</string>
     <string name="reference_image_hint">Adjunta tu propia foto o GIF para recordar la técnica o el equipo. Se guarda en tu dispositivo.</string>

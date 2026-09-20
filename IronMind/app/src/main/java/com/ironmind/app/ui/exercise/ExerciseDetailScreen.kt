@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -50,6 +51,8 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.ironmind.app.R
+import com.ironmind.app.domain.model.SuggestionState
+import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
@@ -70,6 +73,7 @@ fun ExerciseDetailScreen(
 ) {
     val exercise by viewModel.exercise.collectAsStateWithLifecycle()
     val alternatives by viewModel.alternatives.collectAsStateWithLifecycle()
+    val techniqueAdvice by viewModel.techniqueAdvice.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Coil image loader with GIF/animated-WebP support, so an attached GIF actually plays.
@@ -204,6 +208,53 @@ fun ExerciseDetailScreen(
                     Text(stringResource(R.string.instructions_empty), color = TextMuted)
                 } else {
                     Text(instructions, color = TextMuted, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            GlassCard(
+                borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Gold.copy(alpha = 0.55f), Cyan.copy(alpha = 0.35f)),
+                ),
+            ) {
+                SectionTitle(stringResource(R.string.technique_coach_title), accent = Gold)
+                Spacer(Modifier.height(12.dp))
+
+                when (val advice = techniqueAdvice) {
+                    null -> {
+                        Text(stringResource(R.string.technique_coach_hint), color = TextMuted)
+                        Spacer(Modifier.height(12.dp))
+                        AccentButton(
+                            text = stringResource(R.string.technique_coach_generate),
+                            onClick = viewModel::generateTechniqueCoaching,
+                        )
+                    }
+
+                    SuggestionState.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.technique_coach_analyzing), color = TextMuted)
+                    }
+
+                    is SuggestionState.Success -> Column {
+                        Text(advice.suggestion, color = androidx.compose.ui.graphics.Color.White)
+                        if (advice.isComplete) {
+                            Row {
+                                TextButton(onClick = viewModel::generateTechniqueCoaching) {
+                                    Text(stringResource(R.string.ai_regenerate), color = Cyan)
+                                }
+                                TextButton(onClick = viewModel::dismissTechniqueCoaching) {
+                                    Text(stringResource(R.string.action_close), color = TextMuted)
+                                }
+                            }
+                        }
+                    }
+
+                    is SuggestionState.Error -> Column {
+                        Text(advice.message, color = androidx.compose.ui.graphics.Color(0xFFFF6B6B))
+                        TextButton(onClick = viewModel::generateTechniqueCoaching) {
+                            Text(stringResource(R.string.action_retry), color = Cyan)
+                        }
+                    }
                 }
             }
 
