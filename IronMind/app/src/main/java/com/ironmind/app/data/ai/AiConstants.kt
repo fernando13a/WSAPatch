@@ -23,9 +23,19 @@ object AiConstants {
         "https://github.com/fernando13a/WSAPatch/releases/download/model-gemma3-1b/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task"
 
     // Inference / sampling parameters.
+    /** Total token budget for the engine — covers prompt AND response combined, not per-call. */
     const val MAX_TOKENS = 1024
     const val TOP_K = 40
     const val TEMPERATURE = 0.8f
+
+    /**
+     * Rough character budget every [com.ironmind.app.domain.ai] prompt builder should stay under.
+     * Gemma tokenizes at roughly 4 chars/token; reserving ~300 tokens for the response leaves
+     * ~700 tokens (~2800 chars) for the prompt itself within [MAX_TOKENS]. Prompt builders that
+     * embed variable-length data (history, catalogs) must cap/truncate against this so the
+     * response never gets silently cut off by the shared token ceiling.
+     */
+    const val PROMPT_CHAR_BUDGET = 2800
 
     /** Absolute path where the model is expected/stored on this device. */
     fun modelFile(context: Context): File =

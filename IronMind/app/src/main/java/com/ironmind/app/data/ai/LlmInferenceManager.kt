@@ -27,6 +27,11 @@ import javax.inject.Singleton
  * reused; a fresh [LlmInferenceSession] is created per request. Responses are exposed as a
  * `Flow<String>` of incremental chunks via [callbackFlow], producing the typewriter effect.
  *
+ * The engine only tolerates one live [LlmInferenceSession] at a time — with several AI features
+ * (progression, technique coach, insights, ...) all sharing this singleton, [inferenceMutex]
+ * serializes generation so a second caller's request queues instead of racing the first one's
+ * session (which would otherwise corrupt output or crash natively).
+ *
  * Note: the MediaPipe API surface tracks the `tasks-genai` 0.10.x line; builder method names may
  * need minor adjustment if you bump the dependency. The progress listener is treated as emitting
  * *incremental* text — if a future version emits cumulative text, drop the concatenation upstream.
@@ -39,6 +44,9 @@ class LlmInferenceManager @Inject constructor(
 
     private val initMutex = Mutex()
 
+    /** Held for the full lifetime of a single streaming request; serializes access to [engine]. */
+    private val inferenceMutex = Mutex()
+
     @Volatile
     private var engine: LlmInference? = null
 
@@ -47,28 +55,42 @@ class LlmInferenceManager @Inject constructor(
     }
 
     override fun generateResponseStream(prompt: String): Flow<String> = callbackFlow {
-        val llm = ensureEngine()
+        inferenceMutex.withLock {
+            val llm = ensureEngine()
 
-        val sessionOptions = LlmInferenceSessionOptions.builder()
-            .setTopK(AiConstants.TOP_K)
-            .setTemperature(AiConstants.TEMPERATURE)
-            .build()
+            val sessionOptions = LlmInferenceSessionOptions.builder()
+                .setTopK(AiConstants.TOP_K)
+                .setTemperature(AiConstants.TEMPERATURE)
+                .build()
 
-        val session = LlmInferenceSession.createFromOptions(llm, sessionOptions)
-        session.addQueryChunk(prompt)
+            val session = LlmInferenceSession.createFromOptions(llm, sessionOptions)
+            session.addQueryChunk(prompt)
 
-        // Asynchronous, streaming generation. `partialResult` is a new chunk; `done` ends the stream.
-        session.generateResponseAsync { partialResult, done ->
-            trySend(partialResult)
-            if (done) close()
+            // Asynchronous, streaming generation. `partialResult` is a new chunk; `done` ends the stream.
+            session.generateResponseAsync { partialResult, done ->
+                trySend(partialResult)
+                if (done) close()
+            }
+
+            awaitClose { session.close() }
         }
-
-        awaitClose { session.close() }
     }.flowOn(dispatchers.io)
 
+    /**
+     * Releases the engine — but only if no generation is currently in flight. A generation in
+     * progress holds [inferenceMutex] for its entire lifetime, so [tryLock] failing here means
+     * some caller is mid-stream; tearing down the engine underneath it would crash natively, so
+     * this call is a no-op in that case rather than racing the active session.
+     */
     override fun close() {
-        engine?.close()
-        engine = null
+        if (inferenceMutex.tryLock()) {
+            try {
+                engine?.close()
+                engine = null
+            } finally {
+                inferenceMutex.unlock()
+            }
+        }
     }
 
     /** Lazily creates the engine, guarded by a mutex so it initializes exactly once. */
