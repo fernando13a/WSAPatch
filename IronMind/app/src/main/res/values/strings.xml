@@ -7,6 +7,7 @@
     <string name="action_back">Volver</string>
     <string name="action_save">Guardar</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_confirm">Confirmar</string>
     <string name="action_retry">Reintentar</string>
     <string name="action_edit">Editar</string>
     <string name="action_close">Cerrar</string>
@@ -184,6 +185,9 @@
     <string name="model_delete">Borrar modelo</string>
     <string name="model_delete_confirm_title">¿Borrar el modelo?</string>
     <string name="model_delete_confirm_body">Liberarás espacio, pero el coach IA dejará de funcionar hasta que vuelvas a descargarlo o importarlo.</string>
+    <string name="model_mobile_title">Descargar con datos móviles</string>
+    <string name="model_mobile_body">El modelo ocupa ~555 MB. Se recomienda descargar con Wi-Fi, pero puedes usar datos móviles si es necesario. ¿Continuar?</string>
+    <string name="model_mobile_waiting">Esperando confirmación…</string>
 
     <!-- Muscle groups -->
     <string name="muscle_chest">Pecho</string>

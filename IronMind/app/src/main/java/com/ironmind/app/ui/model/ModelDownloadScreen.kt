@@ -102,12 +102,25 @@ fun ModelDownloadScreen(
                         AccentButton(
                             text = stringResource(R.string.ai_download_model),
                             enabled = url.isNotBlank(),
-                            onClick = { viewModel.download(url) },
+                            onClick = { viewModel.downloadWithMobileWarning(url) },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
                             stringResource(R.string.model_resume_hint),
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    ModelDownloadState.AwaitingMobileDataConfirmation -> Column {
+                        Text(
+                            stringResource(R.string.model_downloading),
+                            color = Cyan,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.model_mobile_waiting),
                             color = TextMuted,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -185,6 +198,24 @@ fun ModelDownloadScreen(
             },
             title = { Text(stringResource(R.string.model_delete_confirm_title), color = Gold) },
             text = { Text(stringResource(R.string.model_delete_confirm_body), color = TextMuted) },
+        )
+    }
+
+    if (state is ModelDownloadState.AwaitingMobileDataConfirmation) {
+        AlertDialog(
+            onDismissRequest = { onBack() },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.confirmDownloadOnMobileData(url)
+                }) { Text(stringResource(R.string.action_confirm), color = Cyan) }
+            },
+            dismissButton = {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(R.string.action_cancel), color = TextMuted)
+                }
+            },
+            title = { Text(stringResource(R.string.model_mobile_title), color = Gold) },
+            text = { Text(stringResource(R.string.model_mobile_body), color = TextMuted) },
         )
     }
 }
