@@ -2,8 +2,6 @@ package com.ironmind.app.data.ai
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,17 +19,14 @@ class NetworkConnectivityService @Inject constructor(
             ?: return NetworkConnectivity.NONE
 
         val network = cm.activeNetwork ?: return NetworkConnectivity.NONE
-        val caps = cm.getNetworkCapabilities(network) ?: return NetworkConnectivity.NONE
+        cm.getNetworkCapabilities(network) ?: return NetworkConnectivity.NONE
 
-        // Metered is the question that matters for a ~550 MB download, and it isn't the same as
-        // "cellular": a phone on someone's hotspot, or on metered hotel wifi, has TRANSPORT_WIFI
-        // and still bills for every byte. Treating any wifi as free skipped the warning exactly
-        // where it was needed most.
-        return if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) {
-            NetworkConnectivity.WIFI
-        } else {
-            NetworkConnectivity.MOBILE
-        }
+        // Metered is the real question for a ~550 MB download, and it is not the same as
+        // "cellular": a phone on someone's hotspot, or on metered hotel wifi, bills for every byte.
+        // isActiveNetworkMetered is the platform's own answer and resolves the cases reading
+        // capabilities by hand gets wrong — notably a VPN, whose own capabilities often omit
+        // NOT_METERED even over home wifi, which would otherwise warn on an unmetered connection.
+        return if (cm.isActiveNetworkMetered) NetworkConnectivity.MOBILE else NetworkConnectivity.WIFI
     }
 
     fun isOnMobileData(): Boolean = getConnectivity() == NetworkConnectivity.MOBILE

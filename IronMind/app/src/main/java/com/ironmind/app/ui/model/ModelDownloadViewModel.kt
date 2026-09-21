@@ -49,7 +49,12 @@ class ModelDownloadViewModel @Inject constructor(
 
     /** User accepted the data cost; download over the metered connection, streaming progress. */
     fun confirmDownloadOnMobileData(url: String) {
-        if (url.isBlank()) return
+        if (url.isBlank() || _state.value is ModelDownloadState.Downloading) return
+        // Set synchronously: the confirmation dialog is mounted on the Awaiting state and isn't
+        // dismissed by its own button, so leaving the flip until the first emission crosses the IO
+        // dispatcher leaves it tappable — and a second tap starts a second download appending into
+        // the same .part file, interleaving both bodies into a corrupt model.
+        _state.value = ModelDownloadState.Downloading(null)
         viewModelScope.launch {
             robustDownloader.confirmAndDownload(url.trim()).collect { _state.value = it }
         }

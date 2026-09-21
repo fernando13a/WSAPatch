@@ -4,10 +4,13 @@ import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.MuscleGroup
 import java.text.Normalizer
 
+/** Combining marks left behind by NFD decomposition — hoisted so it compiles once, not per call. */
+private val COMBINING_MARKS = Regex("\\p{Mn}+")
+
 /** Accent- and case-insensitive fold, so "biceps", "Bíceps" and "BICEPS" all match. */
 fun String.foldForSearch(): String =
     Normalizer.normalize(this, Normalizer.Form.NFD)
-        .replace(Regex("\\p{Mn}+"), "")
+        .replace(COMBINING_MARKS, "")
         .lowercase()
         .trim()
 
@@ -26,12 +29,12 @@ fun filterExercises(
     muscleGroup: MuscleGroup? = null,
 ): List<Exercise> {
     val q = query.foldForSearch()
+    // Facet first: it's a reference comparison, and on a filtered muscle group it spares the fold
+    // for most of the ~890-entry catalog on every keystroke.
     return catalog.filter { ex ->
-        (muscleGroup == null || ex.muscleGroup == muscleGroup) &&
-            (
-                q.isEmpty() ||
-                    ex.name.foldForSearch().contains(q) ||
-                    ex.nameEs?.foldForSearch()?.contains(q) == true
-                )
+        if (muscleGroup != null && ex.muscleGroup != muscleGroup) return@filter false
+        q.isEmpty() ||
+            ex.name.foldForSearch().contains(q) ||
+            ex.nameEs?.foldForSearch()?.contains(q) == true
     }
 }

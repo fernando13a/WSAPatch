@@ -61,4 +61,22 @@ class ExerciseFilterTest {
         assertEquals(2, results.size)
         assertEquals(0, filterExercises(catalog, "press", MuscleGroup.BICEPS).size)
     }
+
+    @Test
+    fun matchesTheSpanishNameTheRowActuallyDisplays() {
+        // On a Spanish device the picker renders nameEs, so searching for what's on screen has to
+        // work — matching only the English name made the catalog look empty for the visible text.
+        val squat = Exercise(
+            name = "Back Squat",
+            muscleGroup = MuscleGroup.QUADS,
+            equipment = Equipment.BARBELL,
+            nameEs = "Sentadilla Trasera",
+        )
+
+        assertEquals(1, filterExercises(listOf(squat), "sentadilla").size)
+        // Accent-insensitive on the Spanish name too, and the English name still matches.
+        assertEquals(1, filterExercises(listOf(squat), "SENTADILLA TRASERA").size)
+        assertEquals(1, filterExercises(listOf(squat), "back squat").size)
+        assertEquals(0, filterExercises(listOf(squat), "press").size)
+    }
 }

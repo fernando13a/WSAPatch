@@ -99,7 +99,9 @@ class FakeWorkoutRepository : WorkoutRepository {
     override suspend fun getRoutine(id: Long): Routine? = routineToReturn
     override suspend fun upsertRoutine(routine: Routine): Long {
         upsertedRoutines += routine
-        return if (routine.id == 0L) newRoutineId else routine.id
+        // Mirrors Room's @Upsert: the inserted rowId, but -1 when it falls back to UPDATE. Callers
+        // that assumed the real id back for an existing row were writing to routine -1.
+        return if (routine.id == 0L) newRoutineId else -1L
     }
     override suspend fun deleteRoutine(routine: Routine) = Unit
     override suspend fun addExerciseToRoutine(

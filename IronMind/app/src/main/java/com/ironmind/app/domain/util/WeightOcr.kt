@@ -25,11 +25,16 @@ val STANDARD_PLATES_LB = listOf(2.5, 5.0, 10.0, 15.0, 25.0, 35.0, 45.0, 55.0)
 private const val MIN_PLAUSIBLE = 0.5
 private const val MAX_PLAUSIBLE = 200.0
 
-// A number (optionally decimal, comma or dot) followed by an optional unit word. The digit
-// boundaries matter: without them "2021" is read as "202" (dropped as implausible) and then "1",
-// which is offered to the user as a 1 kg plate. A serial number has to be rejected whole.
+// A number (optionally decimal, comma or dot) followed by an optional unit word.
+//
+// The boundaries reject a long number whole instead of mining plausible fragments out of it:
+// "2021" must not yield "202" (dropped) plus a stray "1" offered as a 1 kg plate. They also have
+// to account for the separators this pattern itself accepts as decimals — "1.234.567" would
+// otherwise match a leading "1" the same way. Hence: not preceded by a digit or separator, and
+// not followed by a digit, or by a separator that has a digit behind it. A trailing "25." at the
+// end of a sentence still reads as 25.
 private val TOKEN = Regex(
-    """(?<!\d)(\d{1,3}(?:[.,]\d{1,2})?)(?!\d)\s*(kgs?|kilos?|lbs?|libras?|pounds?)?""",
+    """(?<![\d.,])(\d{1,3}(?:[.,]\d{1,2})?)(?!\d)(?![.,]\d)\s*(kgs?|kilos?|lbs?|libras?|pounds?)?""",
     RegexOption.IGNORE_CASE,
 )
 

@@ -27,8 +27,8 @@ class IronMindApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         // Startup housekeeping (Spanish names, bundled images). A bare root launch would send any
         // throw here — Room opening, a migration, a disk error — to the default uncaught handler
-        // and kill the process on the splash screen, leaving no way in to fix it from the Backup
-        // screen. None of this work is worth the app for, so it's logged and dropped.
+        // and kill the process on the splash screen. None of this is worth the app for, so a
+        // failure is logged and the app carries on; the catalog simply stays untranslated.
         CoroutineScope(SupervisorJob() + Dispatchers.Default + initializerErrorHandler).launch {
             appInitializer.initialize()
         }

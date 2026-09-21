@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,13 +47,12 @@ fun ExerciseThumbnail(
     allowRemote: Boolean = true,
 ) {
     val shape = RoundedCornerShape(10.dp)
-    // An attached photo can outlive its file (cache cleared, or a backup restored onto a device
-    // where that absolute path means nothing), so fall through to the reference image instead of
-    // letting a dead path mask it. Remembered on the path: this renders once per row in lists that
-    // recompose on every keystroke, and exists() is a blocking stat on the main thread.
-    val attached = remember(exercise.imagePath) {
-        exercise.imagePath?.let(::File)?.takeIf { it.exists() }
-    }
+    // No existence check on the attached photo: File.exists() is a blocking stat, and this renders
+    // once per row in lists of hundreds. If the file is gone (cache cleared, or a backup restored
+    // onto a device where that absolute path means nothing) Coil fails off the main thread and the
+    // initial underneath shows through — a thumbnail isn't worth disk I/O during composition. The
+    // detail screen, which shows one exercise, is where that case is worth resolving properly.
+    val attached = exercise.imagePath?.let(::File)
     val reference = exercise.imageUrl?.takeIf { allowRemote || !it.startsWith("http") }
     val model = attached ?: reference
 

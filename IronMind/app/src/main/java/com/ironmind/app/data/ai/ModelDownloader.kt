@@ -68,51 +68,63 @@ class ModelDownloader @Inject constructor(
 
         val reported = connection.contentLengthLong
         val total = if (append && reported > 0) alreadyHave + reported else reported
-        connection.inputStream.use { input ->
-            java.io.FileOutputStream(part, append).use { output ->
-                val buffer = ByteArray(64 * 1024)
-                var downloaded = if (append) alreadyHave else 0L
-                var lastPercent = -1
-                var read = input.read(buffer)
-                while (read >= 0) {
-                    output.write(buffer, 0, read)
-                    downloaded += read
-                    if (total > 0) {
-                        val percent = (downloaded * 100 / total).toInt()
-                        if (percent != lastPercent) {
-                            lastPercent = percent
-                            emit(ModelDownloadState.Downloading(percent / 100f))
+        var downloaded = if (append) alreadyHave else 0L
+        try {
+            connection.inputStream.use { input ->
+                java.io.FileOutputStream(part, append).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var lastPercent = -1
+                    var read = input.read(buffer)
+                    while (read >= 0) {
+                        output.write(buffer, 0, read)
+                        downloaded += read
+                        if (total > 0) {
+                            val percent = (downloaded * 100 / total).toInt()
+                            if (percent != lastPercent) {
+                                lastPercent = percent
+                                emit(ModelDownloadState.Downloading(percent / 100f))
+                            }
                         }
-                    }
-                    read = input.read(buffer)
-                }
-
-                // A dropped connection ends the stream with -1 rather than an exception, so
-                // without this check a truncated file would be renamed into place and reported
-                // Ready — and only fail much later, inside the inference engine, as an opaque
-                // "Error building tflite model". The .part is kept so the next attempt resumes.
-                if (total > 0 && downloaded != total) {
-                    throw IllegalStateException(
-                        "Descarga incompleta (${downloaded / 1_000_000} MB de ${total / 1_000_000} MB). " +
-                            "Vuelve a intentarlo para reanudarla.",
-                    )
-                }
-                // Chunked responses report no length, so there is nothing to compare against and
-                // a truncation here is indistinguishable from a clean finish. Verify the server
-                // agrees on the size before trusting it.
-                if (total <= 0) {
-                    val actual = part.length()
-                    val expected = headContentLength(url)
-                    if (expected > 0 && actual != expected) {
-                        throw IllegalStateException(
-                            "Descarga incompleta (${actual / 1_000_000} MB de " +
-                                "${expected / 1_000_000} MB). Vuelve a intentarlo para reanudarla.",
-                        )
+                        read = input.read(buffer)
                     }
                 }
             }
+        } finally {
+            // Must run even when the checks below throw, or a flaky connection leaks one pooled
+            // socket per retry for the lifetime of the process.
+            connection.disconnect()
         }
-        connection.disconnect()
+
+        // Checked after the streams close, so part.length() sees everything that was flushed.
+        //
+        // A dropped connection ends the stream with -1 rather than an exception, so without this
+        // a truncated file would be renamed into place and reported Ready — only to fail much
+        // later inside the inference engine as an opaque "Error building tflite model". The .part
+        // is kept so the next attempt resumes from where this one stopped.
+        if (total > 0 && downloaded != total) {
+            throw IllegalStateException(
+                "Descarga incompleta (${downloaded / 1_000_000} MB de ${total / 1_000_000} MB). " +
+                    "Vuelve a intentarlo para reanudarla.",
+            )
+        }
+        // A chunked response reports no length, so a truncation is indistinguishable from a clean
+        // finish; ask the server what the size should be.
+        if (total <= 0) {
+            val expected = headContentLength(url)
+            if (expected > 0 && part.length() > expected) {
+                // Longer than the resource (a stale .part from a different model, say). Resuming
+                // would request a range past the end and get HTTP 416 on every retry forever, so
+                // start clean rather than keeping it.
+                part.delete()
+                throw IllegalStateException("La descarga previa no coincide; se reinició. Vuelve a intentarlo.")
+            }
+            if (expected > 0 && part.length() < expected) {
+                throw IllegalStateException(
+                    "Descarga incompleta (${part.length() / 1_000_000} MB de " +
+                        "${expected / 1_000_000} MB). Vuelve a intentarlo para reanudarla.",
+                )
+            }
+        }
 
         // Guards against a body that completed but isn't a model at all (an error page served
         // with 200, say): no real bundle is this small.

@@ -91,6 +91,22 @@ class PhotoOcrEdgeCasesTest {
     }
 
     @Test
+    fun ignoresLongNumbersWrittenWithSeparators() {
+        // The separators are the same ones a decimal weight uses, so a serial like 1.234.567 has
+        // to be rejected as a whole rather than yielding its leading "1" as a 1 kg plate.
+        assertEquals(emptyList<Any>(), parseDetectedWeights("S/N 1.234.567"))
+        assertEquals(emptyList<Any>(), parseDetectedWeights("Ref 1,250"))
+        assertEquals(emptyList<Any>(), parseDetectedWeights("Cod 1.500"))
+    }
+
+    @Test
+    fun stillReadsDecimalWeightsAndTrailingPunctuation() {
+        assertEquals(2.5, parseDetectedWeights("2.5 kg").single().value, EPSILON)
+        assertEquals(2.5, parseDetectedWeights("2,5 kg").single().value, EPSILON)
+        assertEquals(25.0, parseDetectedWeights("Peso: 25.").single().value, EPSILON)
+    }
+
+    @Test
     fun snapsNoiseToNearestPlate() {
         val snapped = snapToPlate(19.8, WeightUnit.KG)
         assertEquals(20.0, snapped!!, EPSILON)

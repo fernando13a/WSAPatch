@@ -25,6 +25,13 @@ data class RoutineEditUiState(
     val split: RoutineSplit = RoutineSplit.PUSH,
     val selected: List<Exercise> = emptyList(),
     val catalog: List<Exercise> = emptyList(),
+    /**
+     * The row being edited, kept whole so [RoutineEditViewModel.save] can change only the fields
+     * this screen shows. Rebuilding it from name+split alone resets description, position and
+     * createdAt to the data class defaults, which destroys a generated routine's description and
+     * moves it in the list.
+     */
+    val original: Routine? = null,
 ) {
     val canSave: Boolean get() = name.isNotBlank() && selected.isNotEmpty()
     /** Catalog entries not already added to the routine. */
@@ -46,7 +53,7 @@ class RoutineEditViewModel @Inject constructor(
         viewModelScope.launch {
             if (routineId != 0L) {
                 repository.getRoutine(routineId)?.let { r ->
-                    _ui.update { it.copy(routineId = r.id, name = r.name, split = r.split) }
+                    _ui.update { it.copy(routineId = r.id, name = r.name, split = r.split, original = r) }
                 }
                 val existing = repository.observeRoutinePlan(routineId).first()?.exercises.orEmpty()
                 _ui.update { it.copy(selected = existing) }
@@ -92,9 +99,14 @@ class RoutineEditViewModel @Inject constructor(
         val state = _ui.value
         if (!state.canSave) return
         viewModelScope.launch {
-            val id = repository.upsertRoutine(
-                Routine(id = state.routineId, name = state.name.trim(), split = state.split),
-            )
+            val routine = state.original?.copy(name = state.name.trim(), split = state.split)
+                ?: Routine(name = state.name.trim(), split = state.split)
+            val insertedId = repository.upsertRoutine(routine)
+            // Room's @Upsert returns the new rowId only when it INSERTs; on the UPDATE path it
+            // returns -1. Trusting it for an existing routine sent every junction write below to
+            // routine -1: reorders and removals matched nothing, and adding an exercise hit a
+            // foreign-key violation.
+            val id = if (routine.id != 0L) routine.id else insertedId
             // Reconcile the junction: remove dropped exercises, (re)add selected with order.
             val originalIds = if (routineId != 0L) {
                 repository.observeRoutinePlan(routineId).first()?.exercises?.map { it.id }?.toSet().orEmpty()
