@@ -115,25 +115,66 @@ class LlmInferenceManager @Inject constructor(
         val modelFile = resolveModelFile()
         if (!modelFile.exists()) throw LlmModelNotFoundException(modelFile.absolutePath)
 
-        val options = LlmInferenceOptions.builder()
-            .setModelPath(modelFile.absolutePath)
-            .setMaxTokens(AiConstants.MAX_TOKENS)
-            .build()
-        return try {
-            LlmInference.createFromOptions(context, options)
-        } catch (error: Throwable) {
-            // The native engine reports a bad bundle as a multi-line C++ RET_CHECK trace, which is
-            // noise to an athlete standing in a gym. By far the most common cause is a truncated
-            // download, so say what to do about it — the size lets them confirm.
-            val megabytes = modelFile.length() / (1024 * 1024)
-            throw IllegalStateException(
-                "No se pudo cargar el modelo de IA (archivo de $megabytes MB). Suele estar " +
-                    "incompleto o dañado: ve a Modelo de IA, pulsa «Borrar modelo» y descárgalo " +
-                    "otra vez, a ser posible con WiFi.",
-                error,
-            )
+        // CPU (XNNPACK) first, not the library's default of GPU. Gemma 3 support in this API line
+        // landed as "GemmaV3-1B via XNNPACK", and asking a build that lacks the GPU path for one
+        // makes the native loader reject the bundle in model_data.cc with a RET_CHECK trace whose
+        // text ("Error building tflite model") reads exactly like a corrupt download — which is
+        // what a complete, correctly downloaded model was being blamed for. GPU stays as a
+        // fallback so a bundle that does want it still runs.
+        var firstFailure: Exception? = null
+        for (backend in BACKEND_PREFERENCE) {
+            val options = LlmInferenceOptions.builder()
+                .setModelPath(modelFile.absolutePath)
+                .setMaxTokens(AiConstants.MAX_TOKENS)
+                .setPreferredBackend(backend)
+                .build()
+            try {
+                return LlmInference.createFromOptions(context, options)
+            } catch (error: Exception) {
+                // Only the backend-selection failures are worth retrying past; an Error (OOM from
+                // mapping half a gigabyte, a missing native lib) propagates untouched.
+                if (firstFailure == null) firstFailure = error
+            }
         }
+
+        val cause = checkNotNull(firstFailure) { "BACKEND_PREFERENCE must not be empty" }
+        throw IllegalStateException(modelLoadFailureMessage(modelFile.length(), cause.message), cause)
     }
 
     private fun resolveModelFile(): File = AiConstants.modelFile(context)
+
+    private companion object {
+        /** Tried in order; the first backend that builds the engine wins. */
+        val BACKEND_PREFERENCE = listOf(LlmInference.Backend.CPU, LlmInference.Backend.GPU)
+    }
+}
+
+/**
+ * Turns a native engine failure into something an athlete standing in a gym can act on.
+ *
+ * The native side reports any load failure as a multi-line C++ RET_CHECK trace, so the only signal
+ * worth acting on is the file size. Split out as a pure function because [LlmInferenceManager]
+ * needs a [Context] and the native libraries to construct, and this wording is the part that was
+ * wrong: it told people to delete and re-download a file that was complete and correct.
+ */
+fun modelLoadFailureMessage(sizeBytes: Long, causeMessage: String?): String {
+    val megabytes = sizeBytes / (1024 * 1024)
+    val expectedMegabytes = AiConstants.EXPECTED_MODEL_BYTES / (1024 * 1024)
+    if (sizeBytes != AiConstants.EXPECTED_MODEL_BYTES) {
+        return "No se pudo cargar el modelo de IA: el archivo mide $megabytes MB y el modelo por " +
+            "defecto mide $expectedMegabytes MB. Si lo descargaste desde la app está incompleto — " +
+            "ve a Modelo de IA, pulsa «Borrar modelo» y descárgalo otra vez, a ser posible con WiFi."
+    }
+    // Right size, so re-downloading it would waste half a gigabyte and change nothing. Carry the
+    // first line of the native error instead, which is the only part that identifies the cause.
+    val detail = causeMessage
+        ?.lineSequence()
+        ?.map(String::trim)
+        ?.firstOrNull { it.isNotEmpty() }
+        ?.take(140)
+    return buildString {
+        append("El modelo está completo ($megabytes MB), pero el motor de IA no pudo iniciarlo en ")
+        append("este teléfono. Borrarlo y volver a descargarlo no lo arregla.")
+        if (!detail.isNullOrEmpty()) append(" Detalle: $detail")
+    }
 }

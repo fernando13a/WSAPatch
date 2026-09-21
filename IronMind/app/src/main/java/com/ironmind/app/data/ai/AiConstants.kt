@@ -7,9 +7,12 @@ import java.io.File
 object AiConstants {
 
     /**
-     * Model file name expected under `filesDir/models/`. Any MediaPipe-compatible model works
-     * (e.g. a Gemma `.bin`/`.task` bundle). The download/placement step is handled by the UI;
-     * keeping it out of the APK keeps the binary small while staying 100% offline at runtime.
+     * Model file name expected under `filesDir/models/`. It is just a container name — MediaPipe
+     * identifies a bundle by its contents, not its extension — so it is deliberately left alone
+     * even though [DEFAULT_MODEL_URL] now points at a Gemma 3 1B `.task`: renaming it would orphan
+     * the half-gigabyte file already on every device that downloaded one. Any MediaPipe-compatible
+     * bundle works. Keeping it out of the APK keeps the binary small while staying 100% offline at
+     * runtime.
      */
     const val MODEL_FILE_NAME = "gemma-2b-it-int4.bin"
     const val MODEL_SUBDIR = "models"
@@ -21,6 +24,15 @@ object AiConstants {
      * as an unreadable "Error building tflite model" from the native engine.
      */
     const val MIN_PLAUSIBLE_MODEL_BYTES = 20L * 1024 * 1024
+
+    /**
+     * Exact byte count of the bundle [DEFAULT_MODEL_URL] serves. Used only to *word* a load
+     * failure, never to reject a file: an imported model legitimately has a different size, and
+     * the download path already verifies against the server's own Content-Length. Without it the
+     * error message had to guess, and it guessed wrong — a complete 554,661,246-byte file prints
+     * as "528 MB" once divided into MiB, which reads exactly like a truncated one.
+     */
+    const val EXPECTED_MODEL_BYTES = 554_661_246L
 
     /**
      * Default download URL for the model — a public, direct-download link to a MediaPipe-compatible

@@ -30,8 +30,13 @@ kotlinxSerialization = "1.7.3"
 # Image loading (animated GIF / WebP for exercise reference media)
 coil = "2.7.0"
 
-# On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — wired in Stage 3
-mediapipeGenai = "0.10.24"
+# On-device LLM (Google AI Edge / MediaPipe LLM Inference API) — wired in Stage 3.
+# Gemma 3 1B reached this line as "GemmaV3-1B via XNNPACK" in 0.10.24 — the CPU backend only —
+# and 0.10.27 is what the Android LLM Inference guide now pairs with that `.task` bundle. Goes
+# together with the CPU-first backend selection in LlmInferenceManager: left on the library's
+# default GPU backend, the loader rejects a perfectly good model file with an opaque
+# "Error building tflite model" RET_CHECK.
+mediapipeGenai = "0.10.27"
 
 # On-device OCR (ML Kit, bundled Latin model — reads plate/dumbbell markings fully offline)
 mlkitTextRecognition = "16.0.1"
