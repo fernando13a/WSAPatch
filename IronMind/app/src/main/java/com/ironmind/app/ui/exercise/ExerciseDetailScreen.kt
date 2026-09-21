@@ -1,0 +1,277 @@
+package com.ironmind.app.ui.exercise
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import com.ironmind.app.R
+import com.ironmind.app.domain.model.SuggestionState
+import com.ironmind.app.ui.components.AccentButton
+import com.ironmind.app.ui.components.GlassCard
+import com.ironmind.app.ui.components.LabeledValue
+import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.util.displayName
+import com.ironmind.app.ui.util.label
+import com.ironmind.app.ui.theme.Black
+import com.ironmind.app.ui.theme.Cyan
+import com.ironmind.app.ui.theme.Gold
+import com.ironmind.app.ui.theme.TextMuted
+import java.io.File
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExerciseDetailScreen(
+    onBack: () -> Unit,
+    onOpenExercise: (Long) -> Unit = {},
+    viewModel: ExerciseDetailViewModel = hiltViewModel(),
+) {
+    val exercise by viewModel.exercise.collectAsStateWithLifecycle()
+    val alternatives by viewModel.alternatives.collectAsStateWithLifecycle()
+    val techniqueAdvice by viewModel.techniqueAdvice.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::attachImage) }
+
+    Scaffold(
+        containerColor = Black,
+        topBar = {
+            TopAppBar(
+                title = { Text(exercise?.displayName() ?: "", color = Gold, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Black),
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            GlassCard {
+                val muscleLabel = exercise?.muscleGroup?.label() ?: "—"
+                val equipmentLabel = exercise?.equipment?.label() ?: "—"
+                LabeledValue(label = stringResource(R.string.muscle_group_label), value = muscleLabel)
+                Spacer(Modifier.height(8.dp))
+                LabeledValue(label = stringResource(R.string.equipment_label), value = equipmentLabel)
+            }
+
+            GlassCard {
+                SectionTitle(stringResource(R.string.reference_image_title), accent = Cyan)
+                Spacer(Modifier.height(12.dp))
+                val userImagePath = exercise?.imagePath
+                val demoUrl = exercise?.imageUrl
+                when {
+                    userImagePath != null -> {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(File(userImagePath)).build(),
+                            contentDescription = stringResource(R.string.reference_image_cd),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.reference_image_replace), color = Cyan)
+                            }
+                            TextButton(onClick = viewModel::removeImage) {
+                                Text(stringResource(R.string.action_delete), color = TextMuted)
+                            }
+                        }
+                    }
+                    demoUrl != null -> {
+                        // Public-domain demo image: bundled in the APK for the starter exercises,
+                        // fetched on demand (then cached by Coil) for the rest of the catalog —
+                        // hence the note and offline fallback below only apply to remote ones.
+                        val isBundled = !demoUrl.startsWith("http")
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(context).data(demoUrl).crossfade(true).build(),
+                            contentDescription = stringResource(R.string.reference_image_cd),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            loading = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Cyan, strokeWidth = 2.dp)
+                                }
+                            },
+                            error = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        stringResource(
+                                            if (isBundled) R.string.reference_image_failed
+                                            else R.string.reference_image_offline,
+                                        ),
+                                        color = TextMuted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(
+                                if (isBundled) R.string.reference_image_bundled_note
+                                else R.string.reference_image_demo_note,
+                            ),
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.reference_image_add), color = Gold)
+                        }
+                    }
+                    else -> {
+                        Text(stringResource(R.string.reference_image_hint), color = TextMuted)
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.reference_image_add), color = Gold)
+                        }
+                    }
+                }
+            }
+
+            GlassCard {
+                SectionTitle(stringResource(R.string.instructions_title), accent = Gold)
+                Spacer(Modifier.height(12.dp))
+                val instructions = exercise?.instructions
+                if (instructions.isNullOrBlank()) {
+                    Text(stringResource(R.string.instructions_empty), color = TextMuted)
+                } else {
+                    Text(instructions, color = TextMuted, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            GlassCard(
+                borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Gold.copy(alpha = 0.55f), Cyan.copy(alpha = 0.35f)),
+                ),
+            ) {
+                SectionTitle(stringResource(R.string.technique_coach_title), accent = Gold)
+                Spacer(Modifier.height(12.dp))
+
+                when (val advice = techniqueAdvice) {
+                    null -> {
+                        Text(stringResource(R.string.technique_coach_hint), color = TextMuted)
+                        Spacer(Modifier.height(12.dp))
+                        AccentButton(
+                            text = stringResource(R.string.technique_coach_generate),
+                            onClick = viewModel::generateTechniqueCoaching,
+                        )
+                    }
+
+                    SuggestionState.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.technique_coach_analyzing), color = TextMuted)
+                    }
+
+                    is SuggestionState.Success -> Column {
+                        Text(advice.suggestion, color = androidx.compose.ui.graphics.Color.White)
+                        if (advice.isComplete) {
+                            Row {
+                                TextButton(onClick = viewModel::generateTechniqueCoaching) {
+                                    Text(stringResource(R.string.ai_regenerate), color = Cyan)
+                                }
+                                TextButton(onClick = viewModel::dismissTechniqueCoaching) {
+                                    Text(stringResource(R.string.action_close), color = TextMuted)
+                                }
+                            }
+                        }
+                    }
+
+                    is SuggestionState.Error -> Column {
+                        Text(advice.message, color = androidx.compose.ui.graphics.Color(0xFFFF6B6B))
+                        TextButton(onClick = viewModel::generateTechniqueCoaching) {
+                            Text(stringResource(R.string.action_retry), color = Cyan)
+                        }
+                    }
+                }
+            }
+
+            GlassCard {
+                SectionTitle(stringResource(R.string.alternatives_title), accent = Cyan)
+                Spacer(Modifier.height(12.dp))
+                if (alternatives.isEmpty()) {
+                    Text(stringResource(R.string.alternatives_empty), color = TextMuted)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        alternatives.forEach { alternative ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onOpenExercise(alternative.id) },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(alternative.displayName(), color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        alternative.equipment.label(),
+                                        color = TextMuted,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

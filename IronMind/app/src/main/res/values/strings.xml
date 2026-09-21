@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IronMind</string>
+    <string name="nav_home">Inicio</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Volver</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_confirm">Confirmar</string>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_create">Crear</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_move_up">Subir</string>
+    <string name="action_move_down">Bajar</string>
+    <string name="chart_cd">Gráfico de evolución de carga</string>
+
+    <!-- Dashboard -->
+    <string name="dash_engine_label">NEURAL STRENGTH ENGINE</string>
+    <string name="dash_tagline">Tu coach de fuerza, 100% en tu dispositivo.</string>
+    <string name="badge_on_device_ai">IA ON-DEVICE</string>
+    <string name="badge_offline">100% OFFLINE</string>
+    <string name="dash_streak_label">Racha (días)</string>
+    <string name="dash_streak_value">🔥 %1$d</string>
+    <string name="dash_sessions_label">Sesiones</string>
+    <string name="ai_coach_title">Coach IA</string>
+    <string name="ai_model_missing">El modelo de IA no está en el dispositivo. Descárgalo una vez para activar el coach (luego funciona offline).</string>
+    <string name="ai_download_model">Descargar modelo</string>
+    <string name="ai_need_history">Registra un entrenamiento para recibir sugerencias de sobrecarga progresiva generadas en tu dispositivo.</string>
+    <string name="ai_focus">Enfoque: %1$s</string>
+    <string name="ai_focus_fallback">tu último ejercicio</string>
+    <string name="ai_generate">Generar sugerencia</string>
+    <string name="ai_analyzing">Analizando tu progreso…</string>
+    <string name="ai_regenerate">Regenerar</string>
+    <string name="ai_view_progress">Ver progreso de este ejercicio</string>
+    <string name="insights_title">Insights de las últimas 4 semanas</string>
+    <string name="insights_generate">Analizar</string>
+    <string name="insights_analyzing">Analizando tus últimas semanas…</string>
+    <string name="insights_hint">Tendencias de volumen, RPE y 1RM estimado, calculadas de tu historial reciente.</string>
+    <string name="routines_title">Rutinas</string>
+    <string name="routines_new">+ Nueva</string>
+    <string name="routines_empty">Aún no tienes rutinas. Empieza una sesión libre y registra tus ejercicios.</string>
+    <string name="routine_exercise_count">%1$d ejercicios</string>
+    <string name="routine_week_progress">%1$d%% entrenado esta semana</string>
+    <string name="routine_start">Iniciar</string>
+    <string name="start_free_session">Iniciar sesión libre</string>
+
+    <!-- Session -->
+    <string name="session_free_title">Sesión libre</string>
+    <string name="session_time">Tiempo</string>
+    <string name="session_total_volume">Volumen total</string>
+    <string name="session_sets_logged">Sets registrados</string>
+    <string name="session_finish">Finalizar</string>
+    <string name="session_exercises_title">Ejercicios</string>
+    <string name="rest_title">Descanso</string>
+    <string name="rest_dial_active">DESCANSO</string>
+    <string name="rest_dial_ready">LISTO</string>
+    <string name="rest_dial_cd">Descanso: %1$s restante</string>
+    <string name="rest_stop">Detener</string>
+    <string name="rest_seconds">%1$ds</string>
+    <string name="rest_channel_progress">Descanso en curso</string>
+    <string name="rest_channel_alert">Fin del descanso</string>
+    <string name="rest_notif_remaining">Descanso: %1$s</string>
+    <string name="rest_notif_done_title">¡Descanso terminado!</string>
+    <string name="rest_notif_done_body">Toca para volver a tu sesión</string>
+    <string name="add_set_title">Registrar set</string>
+    <string name="recovery_title">Coach de recuperación</string>
+    <string name="recovery_hint">¿Listo para entrenar %1$s hoy? Consulta al coach de IA sobre tu recuperación.</string>
+    <string name="recovery_generate">Consultar</string>
+    <string name="recovery_analyzing">Revisando tu historial reciente…</string>
+    <string name="select_exercise">Selecciona ejercicio</string>
+    <string name="weight_kg">Peso (kg)</string>
+    <string name="weight_input_label">Peso (%1$s)</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_lb">lb</string>
+    <string name="reps">Reps</string>
+    <string name="notes_hint">Notas (suplementos, energía…)</string>
+    <string name="notes_label">Notas</string>
+    <string name="no_sets_yet">Sin sets todavía.</string>
+    <string name="set_line">Set %1$d:  %2$s × %3$d</string>
+    <string name="edit_set_title">Editar set %1$d</string>
+    <string name="kg_value">%1$d kg</string>
+    <string name="plate_calc_open">Calcular discos 🏋️</string>
+
+    <!-- Read the weight from a photo (on-device OCR) -->
+    <string name="photo_weight_title">Peso por foto</string>
+    <string name="photo_weight_desc">Toma una foto de los discos o la mancuerna. La lectura se hace en tu dispositivo, sin conexión. Revisa lo detectado antes de usarlo.</string>
+    <string name="photo_weight_take">Tomar foto</string>
+    <string name="photo_weight_pick">Galería</string>
+    <string name="photo_weight_analyzing">Leyendo la foto…</string>
+    <string name="photo_weight_error">No se pudo leer la foto: %1$s</string>
+    <string name="photo_weight_none">No se reconoció ningún número. Acerca más la cámara al disco, con buena luz y sin ángulo.</string>
+    <string name="photo_weight_detected">Detectado (toca para incluir o excluir):</string>
+    <string name="photo_weight_mode_plates">Discos por lado</string>
+    <string name="photo_weight_mode_direct">Valor directo</string>
+    <string name="photo_weight_plate_unit">Unidad marcada:</string>
+    <string name="photo_weight_bar">Barra (%1$s)</string>
+    <string name="photo_weight_total">Total: %1$s</string>
+    <string name="photo_weight_equivalent">Equivale a %1$s</string>
+    <string name="photo_weight_use">Usar este peso</string>
+    <string name="plate_calc_title">Discos para %1$s</string>
+    <string name="plate_calc_bar">Barra olímpica: %1$s</string>
+    <string name="plate_calc_bar_only">Solo la barra, sin discos.</string>
+    <string name="plate_calc_per_side">Por lado: %1$s</string>
+    <string name="plate_calc_total">Total real: %1$s</string>
+    <string name="plate_calc_leftover">Faltan %1$s (fuera del juego de discos).</string>
+
+    <!-- Progress -->
+    <string name="progress_title">Progreso</string>
+    <string name="load_evolution">Evolución de carga</string>
+    <string name="no_chart_data">Aún no hay datos suficientes para graficar.</string>
+    <string name="point_label">%1$s · %2$s</string>
+    <string name="best_mark">Mejor marca</string>
+    <string name="one_rm_label">1RM estimado</string>
+    <string name="history_title">Historial</string>
+    <string name="no_records">Sin registros todavía.</string>
+    <string name="set_summary">%1$s × %2$d</string>
+    <string name="rpe_suffix">  ·  RPE %1$s</string>
+
+    <!-- Routine editor -->
+    <string name="routine_new_title">Nueva rutina</string>
+    <string name="routine_edit_title">Editar rutina</string>
+    <string name="routine_name_label">Nombre de la rutina</string>
+    <string name="split_label">División</string>
+    <string name="routine_exercises_title">Ejercicios de la rutina</string>
+    <string name="add_from_catalog_hint">Añade ejercicios desde el catálogo.</string>
+    <string name="numbered_exercise">%1$d. %2$s</string>
+    <string name="add_exercise_title">Añadir ejercicio</string>
+    <string name="no_more_catalog">No hay más ejercicios en el catálogo.</string>
+    <string name="select_from_catalog">Seleccionar del catálogo</string>
+    <string name="catalog_search_hint">Buscar ejercicio…</string>
+    <string name="filter_all_muscles">Todos los grupos</string>
+    <string name="catalog_no_results">Sin resultados. Prueba otro término o grupo muscular.</string>
+    <string name="catalog_more_results">+%1$d más — refina la búsqueda</string>
+    <string name="create_new_exercise">+ Crear ejercicio nuevo</string>
+    <string name="save_routine">Guardar rutina</string>
+    <string name="new_exercise_title">Nuevo ejercicio</string>
+    <string name="name_label">Nombre</string>
+    <string name="muscle_group_label">Grupo muscular</string>
+    <string name="equipment_label">Equipo</string>
+
+    <!-- Settings: units -->
+    <string name="settings_units_title">Unidades</string>
+    <string name="settings_units_desc">Elige cómo ves e introduces el peso. Tus datos se guardan siempre en kg; solo cambia la forma de mostrarlos.</string>
+    <string name="unit_kg_name">Kilogramos (kg)</string>
+    <string name="unit_lb_name">Libras (lb)</string>
+
+    <!-- Data backup / restore -->
+    <string name="backup_title">Ajustes</string>
+    <string name="backup_filename">ironmind-backup.json</string>
+    <string name="backup_export_title">Exportar copia</string>
+    <string name="backup_export_desc">Guarda todos tus datos (ejercicios, rutinas, sesiones y sets) en un archivo JSON que puedes conservar o mover a otro dispositivo. Todo ocurre en tu teléfono.</string>
+    <string name="backup_export_action">Exportar</string>
+    <string name="backup_import_title">Restaurar copia</string>
+    <string name="backup_import_desc">Importa un archivo de copia. Atención: reemplazará todos tus datos actuales.</string>
+    <string name="backup_import_action">Importar</string>
+    <string name="backup_restore_confirm_title">¿Restaurar copia?</string>
+    <string name="backup_restore_confirm_body">Esto reemplazará todos tus datos actuales por los del archivo. No se puede deshacer.</string>
+    <string name="backup_working">Procesando…</string>
+    <string name="backup_exported">Copia exportada ✓</string>
+    <string name="backup_imported">Restaurado: %1$d ejercicios · %2$d rutinas · %3$d sesiones · %4$d sets</string>
+    <string name="backup_error">Error: %1$s</string>
+
+    <!-- Exercise detail (equipment + how-to guide + reference image) -->
+    <string name="instructions_title">Cómo hacerlo</string>
+    <string name="instructions_empty">Aún no hay guía para este ejercicio. Puedes adjuntar una imagen de referencia arriba.</string>
+    <string name="alternatives_title">Alternativas</string>
+    <string name="alternatives_empty">No hay alternativas con otro equipo para este grupo muscular.</string>
+    <string name="technique_coach_title">Coach de técnica</string>
+    <string name="technique_coach_hint">Pregúntale a la IA sobre errores comunes, seguridad y variantes de este ejercicio.</string>
+    <string name="technique_coach_generate">Preguntar</string>
+    <string name="technique_coach_analyzing">Analizando la técnica…</string>
+    <string name="routine_generator_title">Generador de rutinas IA</string>
+    <string name="routine_generator_hint">Elige un split, objetivo y equipo disponible.</string>
+    <string name="routine_generator_split_label">Split</string>
+    <string name="routine_generator_goal_label">Objetivo</string>
+    <string name="routine_generator_equipment_label">Equipo disponible</string>
+    <string name="routine_generator_generate">Generar con IA</string>
+    <string name="routine_generator_generating">Generando rutina…</string>
+    <string name="routine_generator_regenerate">Regenerar</string>
+    <string name="routine_generator_proposed_title">Rutina propuesta</string>
+    <string name="routine_generator_name_label">Nombre de la rutina</string>
+    <string name="routine_generator_save">Guardar rutina</string>
+    <string name="routine_generator_sets_label">Series</string>
+    <string name="routine_generator_rest_label">Descanso (s)</string>
+    <string name="routine_generator_no_equipment">Selecciona al menos un tipo de equipo.</string>
+    <string name="routines_generate">✨ Generar con IA</string>
+    <string name="goal_strength">Fuerza</string>
+    <string name="goal_hypertrophy">Hipertrofia</string>
+    <string name="goal_endurance">Resistencia</string>
+    <string name="compare_sessions_title">Comparar sesiones</string>
+    <string name="compare_sessions_first">Sesión A</string>
+    <string name="compare_sessions_second">Sesión B</string>
+    <string name="compare_sessions_pick">Elige una sesión</string>
+    <string name="compare_sessions_compare">Comparar con IA</string>
+    <string name="compare_sessions_analyzing">Comparando sesiones…</string>
+    <string name="reference_image_title">Imagen de referencia</string>
+    <string name="reference_image_cd">Imagen de referencia del ejercicio</string>
+    <string name="reference_image_hint">Adjunta tu propia foto o GIF para recordar la técnica o el equipo. Se guarda en tu dispositivo.</string>
+    <string name="reference_image_add">Añadir imagen</string>
+    <string name="reference_image_replace">Cambiar imagen</string>
+    <string name="reference_image_demo_note">Imagen de demostración (dominio público). Se descarga una vez y queda en caché. Puedes reemplazarla por la tuya.</string>
+    <string name="reference_image_offline">No se pudo cargar la imagen (sin conexión). Se mostrará al reconectar, o adjunta la tuya.</string>
+
+    <!-- Model download -->
+    <string name="model_title">Modelo de IA</string>
+    <string name="model_prompt_title">Activa el coach IA</string>
+    <string name="model_prompt_body">Descarga el modelo una vez (~555 MB, mejor con Wi-Fi). Después el coach funciona 100% sin conexión. Puedes hacerlo más tarde desde el panel del coach.</string>
+    <string name="model_prompt_later">Ahora no</string>
+    <string name="model_ondevice_title">IA on-device</string>
+    <string name="model_desc">El coach de IA corre 100% en tu dispositivo. Descarga una vez un modelo compatible con MediaPipe (p. ej. Gemma). Después funciona sin conexión.</string>
+    <string name="model_url_label">URL del modelo (.bin / .task)</string>
+    <string name="model_downloading_pct">Descargando… %1$d%%</string>
+    <string name="model_downloading">Descargando…</string>
+    <string name="model_ready">Modelo listo ✓</string>
+    <string name="model_error">Error: %1$s</string>
+    <string name="model_or_import">¿Ya tienes el archivo del modelo en el teléfono?</string>
+    <string name="model_import_file">Importar modelo desde archivo</string>
+    <string name="model_resume_hint">Si la descarga se interrumpe, se reanuda donde quedó al reintentar.</string>
+    <string name="model_size_on_disk">Ocupa %1$d MB en el dispositivo.</string>
+    <string name="model_delete">Borrar modelo</string>
+    <string name="model_delete_confirm_title">¿Borrar el modelo?</string>
+    <string name="model_delete_confirm_body">Liberarás espacio, pero el coach IA dejará de funcionar hasta que vuelvas a descargarlo o importarlo.</string>
+    <string name="model_mobile_title">Descargar con datos móviles</string>
+    <string name="model_mobile_body">El modelo ocupa ~555 MB. Se recomienda descargar con Wi-Fi, pero puedes usar datos móviles si es necesario. ¿Continuar?</string>
+    <string name="model_mobile_waiting">Esperando confirmación…</string>
+
+    <!-- Muscle groups -->
+    <string name="muscle_chest">Pecho</string>
+    <string name="muscle_back">Espalda</string>
+    <string name="muscle_shoulders">Hombros</string>
+    <string name="muscle_biceps">Bíceps</string>
+    <string name="muscle_triceps">Tríceps</string>
+    <string name="muscle_forearms">Antebrazos</string>
+    <string name="muscle_quads">Cuádriceps</string>
+    <string name="muscle_hamstrings">Isquiotibiales</string>
+    <string name="muscle_glutes">Glúteos</string>
+    <string name="muscle_calves">Pantorrillas</string>
+    <string name="muscle_abs">Abdominales</string>
+    <string name="muscle_full_body">Cuerpo completo</string>
+    <string name="muscle_other">Otro</string>
+
+    <!-- Equipment -->
+    <string name="equipment_barbell">Barra</string>
+    <string name="equipment_dumbbell">Mancuerna</string>
+    <string name="equipment_machine">Máquina</string>
+    <string name="equipment_cable">Polea</string>
+    <string name="equipment_kettlebell">Pesa rusa</string>
+    <string name="equipment_bodyweight">Peso corporal</string>
+    <string name="equipment_band">Banda</string>
+    <string name="equipment_other">Otro</string>
+
+    <!-- Routine splits -->
+    <string name="split_push">Empuje</string>
+    <string name="split_pull">Tirón</string>
+    <string name="split_legs">Pierna</string>
+    <string name="split_upper">Tren superior</string>
+    <string name="split_lower">Tren inferior</string>
+    <string name="split_full_body">Cuerpo completo</string>
+    <string name="split_chest_triceps">Pecho y tríceps</string>
+    <string name="split_back_biceps">Espalda y bíceps</string>
+    <string name="split_shoulders">Hombros</string>
+    <string name="split_arms">Brazos</string>
+    <string name="split_core">Core</string>
+    <string name="split_cardio">Cardio</string>
+    <string name="split_custom">Personalizada</string>
+
+    <string name="reference_image_bundled_note">Imagen de demostración (dominio público), incluida en la app: se ve sin conexión.</string>
+    <string name="reference_image_failed">No se pudo cargar la imagen incluida en la app.</string>
+
+    <!-- Conversational coach (chat) -->
+    <string name="nav_coach">Coach</string>
+    <string name="chat_title">Coach IA</string>
+    <string name="chat_clear">Nueva conversación</string>
+    <string name="chat_input_hint">Pregúntale a tu coach…</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_stop">Detener</string>
+    <string name="chat_thinking">Pensando…</string>
+    <string name="chat_author_you">TÚ</string>
+    <string name="chat_author_coach">COACH</string>
+    <string name="chat_empty_title">Pregúntame lo que quieras de tu entrenamiento</string>
+    <string name="chat_empty_body">Respondo con tus sets reales, tu racha y tus 1RM estimados — todo se procesa en tu dispositivo, sin internet.</string>
+    <string name="chat_suggestion_week">¿Cómo voy esta semana?</string>
+    <string name="chat_suggestion_today">¿Qué debería entrenar hoy?</string>
+    <string name="chat_suggestion_plateau">¿Cómo rompo mi estancamiento?</string>
+    <string name="chat_suggestion_technique">Dame un consejo de técnica</string>
+</resources>

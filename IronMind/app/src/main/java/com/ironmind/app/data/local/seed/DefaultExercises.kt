@@ -1,0 +1,336 @@
+package com.ironmind.app.data.local.seed
+
+import android.content.Context
+import com.ironmind.app.data.local.dao.WorkoutDao
+import com.ironmind.app.data.local.entity.ExerciseEntity
+import com.ironmind.app.data.local.entity.RoutineEntity
+import com.ironmind.app.data.local.entity.RoutineExerciseCrossRef
+import com.ironmind.app.domain.model.Equipment
+import com.ironmind.app.domain.model.MuscleGroup
+import com.ironmind.app.domain.model.RoutineSplit
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+
+/**
+ * Ships a starter catalog of common exercises and a few Push/Pull/Legs routines so the app is
+ * useful on first launch while remaining 100% offline. Seeded rows are marked `isCustom = false`.
+ *
+ * On top of the ~23 hand-written (Spanish) exercises used by the starter routines, it also imports
+ * a large public-domain catalog (free-exercise-db, The Unlicense — English how-to text) bundled as
+ * an asset, skipping any name already present so the curated Spanish guides win.
+ */
+object DefaultExercises {
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private const val CATALOG_ASSET = "exercises_catalog.json"
+    private const val IMAGE_ASSET_DIR = "exercise_images"
+    private val SLUG_SEPARATORS = Regex("[^a-z0-9]+")
+
+    /** Reference images the app used to point at before they shipped inside the APK. */
+    private const val LEGACY_IMAGE_HOST = "https://raw.githubusercontent.com/yuhonas/free-exercise-db"
+
+    /** Names of the hand-written Spanish entries. */
+    val curatedNames: Set<String> get() = catalog.mapTo(mutableSetOf()) { it.name }
+
+    /**
+     * Curated exercises whose reference image ships inside the APK (`assets/exercise_images`).
+     * These are the lifts in the starter routines — the ones opened most — so they're worth ~1.5 MB
+     * to have work with no connection at all. Everything else in the 876-exercise catalog keeps
+     * its remote URL and fetches on demand; bundling all of them would balloon the download.
+     *
+     * The images come from free-exercise-db (The Unlicense), pulled via the catalog entry for each
+     * lift — its spelling differs ("Back Squat" is "Barbell Squat" there), which is why the files
+     * are named after the curated name instead. Listed explicitly rather than derived from
+     * [curatedNames], so adding an exercise without dropping its JPEG in fails the test below
+     * instead of silently pointing Coil at a missing asset.
+     */
+    val bundledImageNames: Set<String> = setOf(
+        "Barbell Bench Press", "Incline Dumbbell Press", "Cable Fly", "Overhead Press",
+        "Lateral Raise", "Triceps Pushdown", "Overhead Triceps Extension", "Deadlift",
+        "Pull-Up", "Bent-Over Barbell Row", "Lat Pulldown", "Face Pull", "Barbell Curl",
+        "Hammer Curl", "Back Squat", "Leg Press", "Romanian Deadlift", "Leg Curl",
+        "Hip Thrust", "Standing Calf Raise", "Hanging Leg Raise", "Cable Crunch", "Plank",
+    )
+
+    /**
+     * `file://` URI Coil resolves straight out of the APK's assets — no network involved. Matching
+     * is case-insensitive, like every other name lookup here, so a row stored as "PULL-UP" still
+     * finds its image.
+     */
+    fun bundledImageFor(name: String): String? {
+        val slug = assetSlug(name)
+        return if (slug in bundledImageSlugs) "file:///android_asset/$IMAGE_ASSET_DIR/$slug.jpg" else null
+    }
+
+    private val bundledImageSlugs: Set<String> by lazy { bundledImageNames.mapTo(mutableSetOf(), ::assetSlug) }
+
+    /** "Bent-Over Barbell Row" -> "bent_over_barbell_row", matching the shipped file names. */
+    private fun assetSlug(name: String): String =
+        name.lowercase().replace(SLUG_SEPARATORS, "_").trim('_')
+
+    /** Inserts the starter catalog and routines if the exercises table is empty. */
+    suspend fun seed(dao: WorkoutDao, context: Context) {
+        if (dao.countExercises() > 0) return
+
+        dao.upsertExercises(catalog.map { it.copy(imageUrl = bundledImageFor(it.name)) })
+        seedRoutines(dao)
+
+        val curated = curatedNames.mapTo(mutableSetOf()) { it.lowercase() }
+        val extras = loadBundledCatalog(context)
+            .filterNot { it.name.lowercase() in curated }
+            .map { it.toEntity() }
+        if (extras.isNotEmpty()) dao.upsertExercises(extras)
+    }
+
+    /**
+     * Points the curated exercises at their bundled image on installs seeded before it shipped —
+     * they were stored either with no image, or with the free-exercise-db URL. Runs on every
+     * start, so it only touches those two cases: anything else in `imageUrl` was put there
+     * deliberately (a restored backup, say) and rewriting it would silently undo the user's data.
+     * Idempotent, so once every row is migrated this writes nothing.
+     */
+    suspend fun backfillDemoImages(dao: WorkoutDao) {
+        val patched = dao.getAllExercisesOnce().mapNotNull { exercise ->
+            if (exercise.isCustom) return@mapNotNull null
+            val current = exercise.imageUrl
+            val isMigratable = current == null || current.startsWith(LEGACY_IMAGE_HOST)
+            if (!isMigratable) return@mapNotNull null
+            bundledImageFor(exercise.name)?.let { exercise.copy(imageUrl = it) }
+        }
+        if (patched.isNotEmpty()) dao.upsertExercises(patched)
+    }
+
+    /** Reads the bundled catalog; best-effort, so a missing/corrupt asset never breaks startup. */
+    private fun loadBundledCatalog(context: Context): List<CatalogExerciseDto> = runCatching {
+        val text = context.assets.open(CATALOG_ASSET).bufferedReader().use { it.readText() }
+        json.decodeFromString(ListSerializer(CatalogExerciseDto.serializer()), text)
+    }.getOrDefault(emptyList())
+
+    @Serializable
+    private data class CatalogExerciseDto(
+        val name: String,
+        val muscleGroup: String,
+        val equipment: String,
+        val instructions: String = "",
+        val imageUrl: String? = null,
+    )
+
+    private fun CatalogExerciseDto.toEntity(): ExerciseEntity = ExerciseEntity(
+        name = name,
+        muscleGroup = runCatching { enumValueOf<MuscleGroup>(muscleGroup) }.getOrDefault(MuscleGroup.OTHER),
+        equipment = runCatching { enumValueOf<Equipment>(equipment) }.getOrDefault(Equipment.OTHER),
+        isCustom = false,
+        instructions = instructions.ifBlank { null },
+        imageUrl = imageUrl,
+    )
+
+    private suspend fun seedRoutines(dao: WorkoutDao) {
+        val idByName = dao.getAllExercisesOnce().associate { it.name to it.id }
+
+        suspend fun routine(name: String, split: RoutineSplit, exercises: List<String>) {
+            val routineId = dao.upsertRoutine(RoutineEntity(name = name, split = split))
+            exercises.forEachIndexed { index, exName ->
+                idByName[exName]?.let { exId ->
+                    dao.upsertRoutineExerciseCrossRef(
+                        RoutineExerciseCrossRef(routineId = routineId, exerciseId = exId, position = index),
+                    )
+                }
+            }
+        }
+
+        routine(
+            "Push", RoutineSplit.PUSH,
+            listOf("Barbell Bench Press", "Incline Dumbbell Press", "Overhead Press", "Lateral Raise", "Triceps Pushdown"),
+        )
+        routine(
+            "Pull", RoutineSplit.PULL,
+            listOf("Deadlift", "Pull-Up", "Bent-Over Barbell Row", "Lat Pulldown", "Barbell Curl"),
+        )
+        routine(
+            "Legs", RoutineSplit.LEGS,
+            listOf("Back Squat", "Leg Press", "Romanian Deadlift", "Leg Curl", "Standing Calf Raise"),
+        )
+    }
+
+    private fun ex(
+        name: String,
+        muscleGroup: MuscleGroup,
+        equipment: Equipment,
+        instructions: String,
+    ) = ExerciseEntity(
+        name = name,
+        muscleGroup = muscleGroup,
+        equipment = equipment,
+        isCustom = false,
+        instructions = instructions,
+    )
+
+    private val catalog: List<ExerciseEntity> = listOf(
+        // Push
+        ex(
+            "Barbell Bench Press", MuscleGroup.CHEST, Equipment.BARBELL,
+            "1) Acuéstate en el banco con los ojos bajo la barra y los pies firmes en el suelo.\n" +
+                "2) Agarra un poco más ancho que los hombros y saca la barra con las escápulas retraídas.\n" +
+                "3) Baja controlado hasta la parte baja del pecho, codos a ~45°.\n" +
+                "4) Empuja hasta extender los codos sin rebotar la barra en el pecho.",
+        ),
+        ex(
+            "Incline Dumbbell Press", MuscleGroup.CHEST, Equipment.DUMBBELL,
+            "1) Ajusta el banco a 30–45°. Sube las mancuernas a los hombros.\n" +
+                "2) Parte con las mancuernas sobre el pecho alto, muñecas firmes.\n" +
+                "3) Baja controlado hasta sentir estiramiento en el pecho.\n" +
+                "4) Empuja juntando ligeramente arriba sin chocar las mancuernas.",
+        ),
+        ex(
+            "Cable Fly", MuscleGroup.CHEST, Equipment.CABLE,
+            "1) Poleas a la altura del pecho o algo más arriba. Un pie adelantado.\n" +
+                "2) Codos ligeramente flexionados y fijos durante todo el movimiento.\n" +
+                "3) Junta las manos al frente describiendo un arco, aprieta el pecho.\n" +
+                "4) Regresa controlado hasta sentir estiramiento, sin dejar caer el peso.",
+        ),
+        ex(
+            "Overhead Press", MuscleGroup.SHOULDERS, Equipment.BARBELL,
+            "1) De pie, barra en los hombros, agarre a la anchura de los hombros.\n" +
+                "2) Aprieta glúteos y core; codos ligeramente por delante de la barra.\n" +
+                "3) Empuja la barra recta hacia arriba, moviendo la cabeza atrás lo justo.\n" +
+                "4) Bloquea arriba con la barra sobre la mitad del pie; baja controlado.",
+        ),
+        ex(
+            "Lateral Raise", MuscleGroup.SHOULDERS, Equipment.DUMBBELL,
+            "1) De pie, mancuernas a los costados, leve flexión de codos.\n" +
+                "2) Sube por los lados hasta la altura de los hombros, guiando con los codos.\n" +
+                "3) Evita balanceo; no uses impulso de la cadera.\n" +
+                "4) Baja lento (2–3 s). Peso moderado, técnica sobre carga.",
+        ),
+        ex(
+            "Triceps Pushdown", MuscleGroup.TRICEPS, Equipment.CABLE,
+            "1) Polea alta con barra o cuerda. Codos pegados al torso.\n" +
+                "2) Extiende los codos hacia abajo hasta bloquear, sin mover los hombros.\n" +
+                "3) Aprieta el tríceps abajo 1 segundo.\n" +
+                "4) Sube controlado hasta ~90° sin dejar que la polea tire de más.",
+        ),
+        ex(
+            "Overhead Triceps Extension", MuscleGroup.TRICEPS, Equipment.DUMBBELL,
+            "1) Sujeta una mancuerna con ambas manos sobre la cabeza.\n" +
+                "2) Codos apuntando al frente y pegados; core firme.\n" +
+                "3) Baja la mancuerna por detrás de la cabeza flexionando solo los codos.\n" +
+                "4) Extiende hasta arriba sin arquear la espalda.",
+        ),
+        // Pull
+        ex(
+            "Deadlift", MuscleGroup.BACK, Equipment.BARBELL,
+            "1) Pies a la anchura de cadera, barra sobre la mitad del pie.\n" +
+                "2) Bisagra de cadera, espalda neutra, pecho arriba, agarra la barra.\n" +
+                "3) Empuja el suelo y sube la barra pegada a las piernas.\n" +
+                "4) Bloquea cadera arriba; baja con control haciendo bisagra, sin redondear.",
+        ),
+        ex(
+            "Pull-Up", MuscleGroup.BACK, Equipment.BODYWEIGHT,
+            "1) Cuélgate con agarre un poco más ancho que los hombros, palmas al frente.\n" +
+                "2) Baja los hombros y aprieta la espalda; sube llevando el pecho a la barra.\n" +
+                "3) Barbilla por encima de la barra, sin balanceo.\n" +
+                "4) Baja controlado hasta extender los brazos.",
+        ),
+        ex(
+            "Bent-Over Barbell Row", MuscleGroup.BACK, Equipment.BARBELL,
+            "1) Bisagra de cadera hasta el torso casi paralelo al suelo, espalda neutra.\n" +
+                "2) Barra colgando, agarre prono a la anchura de los hombros.\n" +
+                "3) Rema la barra hacia el abdomen bajo, codos cerca del cuerpo.\n" +
+                "4) Aprieta la espalda arriba y baja controlado.",
+        ),
+        ex(
+            "Lat Pulldown", MuscleGroup.BACK, Equipment.CABLE,
+            "1) Sujeta la barra más ancho que los hombros, muslos fijos bajo el rodillo.\n" +
+                "2) Pecho arriba, tira de la barra hacia la clavícula bajando los codos.\n" +
+                "3) Aprieta los dorsales abajo; no te eches muy atrás.\n" +
+                "4) Sube controlado hasta estirar por completo.",
+        ),
+        ex(
+            "Face Pull", MuscleGroup.SHOULDERS, Equipment.CABLE,
+            "1) Cuerda en polea alta, a la altura de la cara.\n" +
+                "2) Tira hacia la frente separando las manos, codos altos.\n" +
+                "3) Aprieta la parte alta de la espalda y los hombros posteriores.\n" +
+                "4) Regresa controlado. Peso ligero-moderado, muchas reps.",
+        ),
+        ex(
+            "Barbell Curl", MuscleGroup.BICEPS, Equipment.BARBELL,
+            "1) De pie, barra con agarre supino a la anchura de los hombros.\n" +
+                "2) Codos pegados al torso y fijos.\n" +
+                "3) Flexiona subiendo la barra sin balancear la espalda.\n" +
+                "4) Aprieta arriba y baja controlado hasta extender.",
+        ),
+        ex(
+            "Hammer Curl", MuscleGroup.BICEPS, Equipment.DUMBBELL,
+            "1) Mancuernas a los costados con agarre neutro (palmas enfrentadas).\n" +
+                "2) Codos fijos; sube manteniendo el agarre tipo martillo.\n" +
+                "3) Aprieta arriba sin girar la muñeca.\n" +
+                "4) Baja lento y controlado.",
+        ),
+        // Legs
+        ex(
+            "Back Squat", MuscleGroup.QUADS, Equipment.BARBELL,
+            "1) Barra sobre los trapecios, pies a la anchura de hombros, puntas algo abiertas.\n" +
+                "2) Core firme; baja llevando cadera atrás y rodillas en línea con los pies.\n" +
+                "3) Baja al menos hasta que los muslos queden paralelos, espalda neutra.\n" +
+                "4) Empuja el suelo para subir sin que las rodillas se metan hacia dentro.",
+        ),
+        ex(
+            "Leg Press", MuscleGroup.QUADS, Equipment.MACHINE,
+            "1) Espalda y glúteos pegados al respaldo, pies a la anchura de hombros en la plataforma.\n" +
+                "2) Suelta los seguros y baja controlado hasta ~90° de rodilla.\n" +
+                "3) No dejes que la zona lumbar se despegue del asiento.\n" +
+                "4) Empuja con el talón sin bloquear las rodillas de golpe.",
+        ),
+        ex(
+            "Romanian Deadlift", MuscleGroup.HAMSTRINGS, Equipment.BARBELL,
+            "1) De pie con la barra, rodillas levemente flexionadas y fijas.\n" +
+                "2) Haz bisagra de cadera llevando el glúteo atrás, barra pegada a las piernas.\n" +
+                "3) Baja hasta sentir estiramiento en isquios, espalda neutra.\n" +
+                "4) Sube empujando la cadera al frente y aprieta glúteos arriba.",
+        ),
+        ex(
+            "Leg Curl", MuscleGroup.HAMSTRINGS, Equipment.MACHINE,
+            "1) Ajusta el rodillo justo por encima de los talones.\n" +
+                "2) Flexiona las rodillas llevando los talones al glúteo.\n" +
+                "3) Aprieta los isquios en el punto máximo.\n" +
+                "4) Baja controlado sin dejar caer el peso.",
+        ),
+        ex(
+            "Hip Thrust", MuscleGroup.GLUTES, Equipment.BARBELL,
+            "1) Espalda alta apoyada en un banco, barra sobre la cadera (usa almohadilla).\n" +
+                "2) Pies firmes, empuja con los talones subiendo la cadera.\n" +
+                "3) Extiende hasta alinear hombros-cadera-rodillas y aprieta glúteos arriba.\n" +
+                "4) Baja controlado sin arquear la lumbar.",
+        ),
+        ex(
+            "Standing Calf Raise", MuscleGroup.CALVES, Equipment.MACHINE,
+            "1) Hombros bajo las almohadillas, puntas de los pies en la plataforma.\n" +
+                "2) Baja los talones sintiendo estiramiento en el gemelo.\n" +
+                "3) Sube lo máximo sobre las puntas y aprieta 1 segundo.\n" +
+                "4) Baja lento; controla todo el rango.",
+        ),
+        // Core
+        ex(
+            "Hanging Leg Raise", MuscleGroup.ABS, Equipment.BODYWEIGHT,
+            "1) Cuélgate de la barra con brazos extendidos, sin balanceo.\n" +
+                "2) Sube las piernas juntas llevando la pelvis hacia arriba (retroversión).\n" +
+                "3) Evita usar impulso; controla la bajada.\n" +
+                "4) Rodillas flexionadas si aún no dominas con piernas rectas.",
+        ),
+        ex(
+            "Cable Crunch", MuscleGroup.ABS, Equipment.CABLE,
+            "1) De rodillas frente a la polea alta con cuerda tras la nuca.\n" +
+                "2) Flexiona el tronco llevando los codos hacia los muslos, redondeando la columna.\n" +
+                "3) Aprieta el abdomen abajo; el movimiento viene del tronco, no de la cadera.\n" +
+                "4) Sube controlado sin perder la tensión.",
+        ),
+        ex(
+            "Plank", MuscleGroup.ABS, Equipment.BODYWEIGHT,
+            "1) Apoya antebrazos y puntas de los pies, codos bajo los hombros.\n" +
+                "2) Cuerpo en línea recta: aprieta abdomen y glúteos.\n" +
+                "3) No dejes caer la cadera ni la subas.\n" +
+                "4) Respira y mantén el tiempo objetivo; progresa aumentando segundos.",
+        ),
+    )
+}
