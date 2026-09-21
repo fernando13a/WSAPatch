@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Guards the bundled reference images. These are the exercises in the starter routines, so a
@@ -49,5 +50,38 @@ class DefaultExercisesImagesTest {
     fun everyBundledNameIsACuratedExercise() {
         val orphans = DefaultExercises.bundledImageNames - DefaultExercises.curatedNames
         assertTrue("Bundled images with no matching curated exercise: $orphans", orphans.isEmpty())
+    }
+
+    @Test
+    fun matchingIsCaseInsensitive() {
+        assertEquals(
+            DefaultExercises.bundledImageFor("Back Squat"),
+            DefaultExercises.bundledImageFor("BACK SQUAT"),
+        )
+    }
+
+    /**
+     * The name lists above only prove the app *thinks* it has an image. This walks the real asset
+     * directory, because a listed name whose JPEG was never committed resolves to a
+     * `file:///android_asset/...` path that 404s at runtime with no remote fallback behind it.
+     */
+    @Test
+    fun everyBundledNameHasAFileShippedInAssets() {
+        val dir = sequenceOf(
+            "src/main/assets/exercise_images",
+            "app/src/main/assets/exercise_images",
+            "IronMind/app/src/main/assets/exercise_images",
+        ).map(::File).firstOrNull { it.isDirectory }
+            ?: error("assets/exercise_images not found from ${File("").absolutePath}")
+
+        val shipped = dir.list().orEmpty().toSet()
+        val expected = DefaultExercises.bundledImageNames
+            .associateWith { DefaultExercises.bundledImageFor(it)!!.substringAfterLast('/') }
+
+        val missing = expected.filterValues { it !in shipped }
+        assertTrue("Listed with no JPEG committed: ${missing.keys}", missing.isEmpty())
+
+        val unused = shipped - expected.values.toSet()
+        assertTrue("JPEGs in assets that no exercise points at: $unused", unused.isEmpty())
     }
 }

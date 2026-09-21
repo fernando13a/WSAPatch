@@ -262,6 +262,9 @@
     <string name="split_cardio">Cardio</string>
     <string name="split_custom">Custom</string>
 
+    <string name="reference_image_bundled_note">Demo image (public domain), shipped with the app — works offline.</string>
+    <string name="reference_image_failed">Couldn\'t load the image shipped with the app.</string>
+
     <!-- Conversational coach (chat) -->
     <string name="nav_coach">Coach</string>
     <string name="chat_title">AI Coach</string>

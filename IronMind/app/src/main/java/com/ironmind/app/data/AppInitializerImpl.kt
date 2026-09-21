@@ -12,8 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Initializes the app on first run and periodically thereafter: Spanish exercise names, and the
- * demo images for curated exercises seeded before the catalog alias table existed.
+ * Initializes the app on first run and periodically thereafter: Spanish exercise names, and
+ * pointing the starter exercises at the reference images now bundled in the APK.
  */
 @Singleton
 class AppInitializerImpl @Inject constructor(

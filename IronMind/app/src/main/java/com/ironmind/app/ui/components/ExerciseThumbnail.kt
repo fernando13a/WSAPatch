@@ -1,6 +1,5 @@
 package com.ironmind.app.ui.components
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -9,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,78 +16,65 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.ImageLoader
-import coil.compose.SubcomposeAsyncImage
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
+import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.ui.theme.Cyan
 import com.ironmind.app.ui.theme.TextMuted
+import com.ironmind.app.ui.util.displayName
 import java.io.File
-
-/**
- * Coil loader with GIF/animated-WebP support, so an attached GIF actually plays. Remembered per
- * call site; Coil's own memory/disk cache is shared underneath, so lists don't refetch.
- */
-@Composable
-fun rememberExerciseImageLoader(): ImageLoader {
-    val context = LocalContext.current
-    return remember(context) {
-        ImageLoader.Builder(context)
-            .components {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
-    }
-}
 
 /**
  * Small square image for an exercise in a list. Prefers the athlete's own attached photo, then the
  * reference image (bundled in the APK for the starter exercises, fetched on demand for the rest).
- * Falls back to the exercise's initial rather than a broken-image box, so a row never looks empty
- * while offline.
+ * The exercise's initial shows underneath, so a row reads correctly while the image loads, when
+ * there's no image, and when a remote one can't be fetched offline.
+ *
+ * Uses [AsyncImage] with the app-wide loader from
+ * [com.ironmind.app.IronMindApplication.newImageLoader] rather than SubcomposeAsyncImage: these
+ * render in long lists, where subcomposition costs far more than the plain layout this needs.
  */
 @Composable
 fun ExerciseThumbnail(
     exercise: Exercise,
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
+    /**
+     * `false` where the whole catalog composes at once (the session's exercise picker renders all
+     * ~890 rows eagerly): only images already on the device are shown, so opening it can't kick
+     * off hundreds of downloads. Everything else keeps the initial.
+     */
+    allowRemote: Boolean = true,
 ) {
     val shape = RoundedCornerShape(10.dp)
-    val boxModifier = modifier
-        .size(size)
-        .clip(shape)
-        .background(Cyan.copy(alpha = 0.08f))
-        .border(1.dp, Cyan.copy(alpha = 0.25f), shape)
+    // An attached photo can outlive its file (cache cleared, or a backup restored onto a device
+    // where that absolute path means nothing), so fall through to the reference image instead of
+    // letting a dead path mask it.
+    val attached = exercise.imagePath?.takeIf { File(it).exists() }?.let { File(it) }
+    val reference = exercise.imageUrl?.takeIf { allowRemote || !it.startsWith("http") }
+    val model = attached ?: reference
 
-    val model = exercise.imagePath?.let { File(it) } ?: exercise.imageUrl
-    if (model == null) {
-        Box(boxModifier, contentAlignment = Alignment.Center) { Initial(exercise) }
-        return
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(Cyan.copy(alpha = 0.08f))
+            .border(1.dp, Cyan.copy(alpha = 0.25f), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = exercise.displayName().firstOrNull()?.uppercase() ?: "?",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextMuted,
+        )
+        if (model != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current).data(model).crossfade(true).build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(size).clip(shape),
+            )
+        }
     }
-
-    SubcomposeAsyncImage(
-        model = ImageRequest.Builder(LocalContext.current).data(model).crossfade(true).build(),
-        imageLoader = rememberExerciseImageLoader(),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = boxModifier,
-        loading = { Box(Modifier, contentAlignment = Alignment.Center) { Initial(exercise) } },
-        error = { Box(Modifier, contentAlignment = Alignment.Center) { Initial(exercise) } },
-    )
-}
-
-@Composable
-private fun Initial(exercise: Exercise) {
-    Text(
-        text = exercise.name.firstOrNull()?.uppercase() ?: "?",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = TextMuted,
-    )
 }

@@ -305,7 +305,10 @@ private fun AddSetCard(
                 exercises.forEach { exercise ->
                     DropdownMenuItem(
                         text = { Text(exercise.displayName()) },
-                        leadingIcon = { ExerciseThumbnail(exercise = exercise, size = 36.dp) },
+                        leadingIcon = {
+                            // The menu composes the entire catalog at once, so local images only.
+                            ExerciseThumbnail(exercise = exercise, size = 36.dp, allowRemote = false)
+                        },
                         onClick = {
                             onSelectedIdChange(exercise.id)
                             expanded = false

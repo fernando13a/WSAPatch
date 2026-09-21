@@ -1,6 +1,5 @@
 package com.ironmind.app.ui.exercise
 
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -32,7 +31,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,11 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.SuggestionState
@@ -75,19 +70,6 @@ fun ExerciseDetailScreen(
     val alternatives by viewModel.alternatives.collectAsStateWithLifecycle()
     val techniqueAdvice by viewModel.techniqueAdvice.collectAsStateWithLifecycle()
     val context = LocalContext.current
-
-    // Coil image loader with GIF/animated-WebP support, so an attached GIF actually plays.
-    val imageLoader = remember {
-        ImageLoader.Builder(context)
-            .components {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
-    }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -132,7 +114,6 @@ fun ExerciseDetailScreen(
                     userImagePath != null -> {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(File(userImagePath)).build(),
-                            imageLoader = imageLoader,
                             contentDescription = stringResource(R.string.reference_image_cd),
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
@@ -151,12 +132,12 @@ fun ExerciseDetailScreen(
                         }
                     }
                     demoUrl != null -> {
-                        // Public-domain demo image, loaded on demand and cached by Coil. It shows a
-                        // spinner while loading and a graceful offline note if the fetch fails (the
-                        // app is offline-first, so the network image may not be reachable).
+                        // Public-domain demo image: bundled in the APK for the starter exercises,
+                        // fetched on demand (then cached by Coil) for the rest of the catalog —
+                        // hence the note and offline fallback below only apply to remote ones.
+                        val isBundled = !demoUrl.startsWith("http")
                         SubcomposeAsyncImage(
                             model = ImageRequest.Builder(context).data(demoUrl).crossfade(true).build(),
-                            imageLoader = imageLoader,
                             contentDescription = stringResource(R.string.reference_image_cd),
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
@@ -171,7 +152,10 @@ fun ExerciseDetailScreen(
                             error = {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Text(
-                                        stringResource(R.string.reference_image_offline),
+                                        stringResource(
+                                            if (isBundled) R.string.reference_image_failed
+                                            else R.string.reference_image_offline,
+                                        ),
                                         color = TextMuted,
                                         style = MaterialTheme.typography.bodySmall,
                                         textAlign = TextAlign.Center,
@@ -181,7 +165,10 @@ fun ExerciseDetailScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            stringResource(R.string.reference_image_demo_note),
+                            stringResource(
+                                if (isBundled) R.string.reference_image_bundled_note
+                                else R.string.reference_image_demo_note,
+                            ),
                             color = TextMuted,
                             style = MaterialTheme.typography.bodySmall,
                         )

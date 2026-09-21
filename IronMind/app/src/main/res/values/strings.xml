@@ -267,6 +267,9 @@
     <string name="split_cardio">Cardio</string>
     <string name="split_custom">Personalizada</string>
 
+    <string name="reference_image_bundled_note">Imagen de demostración (dominio público), incluida en la app: se ve sin conexión.</string>
+    <string name="reference_image_failed">No se pudo cargar la imagen incluida en la app.</string>
+
     <!-- Conversational coach (chat) -->
     <string name="nav_coach">Coach</string>
     <string name="chat_title">Coach IA</string>

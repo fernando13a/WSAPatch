@@ -25,6 +25,10 @@ object DefaultExercises {
     private val json = Json { ignoreUnknownKeys = true }
     private const val CATALOG_ASSET = "exercises_catalog.json"
     private const val IMAGE_ASSET_DIR = "exercise_images"
+    private val SLUG_SEPARATORS = Regex("[^a-z0-9]+")
+
+    /** Reference images the app used to point at before they shipped inside the APK. */
+    private const val LEGACY_IMAGE_HOST = "https://raw.githubusercontent.com/yuhonas/free-exercise-db"
 
     /** Names of the hand-written Spanish entries. */
     val curatedNames: Set<String> get() = catalog.mapTo(mutableSetOf()) { it.name }
@@ -49,13 +53,21 @@ object DefaultExercises {
         "Hip Thrust", "Standing Calf Raise", "Hanging Leg Raise", "Cable Crunch", "Plank",
     )
 
-    /** `file://` URI Coil resolves straight out of the APK's assets — no network involved. */
-    fun bundledImageFor(name: String): String? =
-        if (name in bundledImageNames) "file:///android_asset/$IMAGE_ASSET_DIR/${assetSlug(name)}.jpg" else null
+    /**
+     * `file://` URI Coil resolves straight out of the APK's assets — no network involved. Matching
+     * is case-insensitive, like every other name lookup here, so a row stored as "PULL-UP" still
+     * finds its image.
+     */
+    fun bundledImageFor(name: String): String? {
+        val slug = assetSlug(name)
+        return if (slug in bundledImageSlugs) "file:///android_asset/$IMAGE_ASSET_DIR/$slug.jpg" else null
+    }
+
+    private val bundledImageSlugs: Set<String> by lazy { bundledImageNames.mapTo(mutableSetOf(), ::assetSlug) }
 
     /** "Bent-Over Barbell Row" -> "bent_over_barbell_row", matching the shipped file names. */
     private fun assetSlug(name: String): String =
-        name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+        name.lowercase().replace(SLUG_SEPARATORS, "_").trim('_')
 
     /** Inserts the starter catalog and routines if the exercises table is empty. */
     suspend fun seed(dao: WorkoutDao, context: Context) {
@@ -72,14 +84,19 @@ object DefaultExercises {
     }
 
     /**
-     * Points the curated exercises at their bundled image on installs seeded before it shipped
-     * (they were stored with no image at all, or with the remote URL). Idempotent: once every row
-     * already matches, this writes nothing, so it's safe to run on every start.
+     * Points the curated exercises at their bundled image on installs seeded before it shipped —
+     * they were stored either with no image, or with the free-exercise-db URL. Runs on every
+     * start, so it only touches those two cases: anything else in `imageUrl` was put there
+     * deliberately (a restored backup, say) and rewriting it would silently undo the user's data.
+     * Idempotent, so once every row is migrated this writes nothing.
      */
     suspend fun backfillDemoImages(dao: WorkoutDao) {
         val patched = dao.getAllExercisesOnce().mapNotNull { exercise ->
-            val bundled = bundledImageFor(exercise.name) ?: return@mapNotNull null
-            exercise.takeIf { it.imageUrl != bundled }?.copy(imageUrl = bundled)
+            if (exercise.isCustom) return@mapNotNull null
+            val current = exercise.imageUrl
+            val isMigratable = current == null || current.startsWith(LEGACY_IMAGE_HOST)
+            if (!isMigratable) return@mapNotNull null
+            bundledImageFor(exercise.name)?.let { exercise.copy(imageUrl = it) }
         }
         if (patched.isNotEmpty()) dao.upsertExercises(patched)
     }
