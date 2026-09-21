@@ -109,7 +109,20 @@ class LlmInferenceManager @Inject constructor(
             .setModelPath(modelFile.absolutePath)
             .setMaxTokens(AiConstants.MAX_TOKENS)
             .build()
-        return LlmInference.createFromOptions(context, options)
+        return try {
+            LlmInference.createFromOptions(context, options)
+        } catch (error: Throwable) {
+            // The native engine reports a bad bundle as a multi-line C++ RET_CHECK trace, which is
+            // noise to an athlete standing in a gym. By far the most common cause is a truncated
+            // download, so say what to do about it — the size lets them confirm.
+            val megabytes = modelFile.length() / (1024 * 1024)
+            throw IllegalStateException(
+                "No se pudo cargar el modelo de IA (archivo de $megabytes MB). Suele estar " +
+                    "incompleto o dañado: ve a Modelo de IA, pulsa «Borrar modelo» y descárgalo " +
+                    "otra vez, a ser posible con WiFi.",
+                error,
+            )
+        }
     }
 
     private fun resolveModelFile(): File = AiConstants.modelFile(context)

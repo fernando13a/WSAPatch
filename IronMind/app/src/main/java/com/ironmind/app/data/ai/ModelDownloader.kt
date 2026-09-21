@@ -25,7 +25,9 @@ class ModelDownloader @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) {
 
-    fun isReady(): Boolean = AiConstants.modelFile(context).exists()
+    fun isReady(): Boolean = AiConstants.modelFile(context).let {
+        it.exists() && it.length() >= AiConstants.MIN_PLAUSIBLE_MODEL_BYTES
+    }
 
     /** Size of the model on disk in bytes (0 if not present). For "free up space" UI. */
     fun modelSizeBytes(): Long = AiConstants.modelFile(context).let { if (it.exists()) it.length() else 0L }
@@ -84,9 +86,30 @@ class ModelDownloader @Inject constructor(
                     }
                     read = input.read(buffer)
                 }
+
+                // A dropped connection ends the stream with -1 rather than an exception, so
+                // without this check a truncated file would be renamed into place and reported
+                // Ready — and only fail much later, inside the inference engine, as an opaque
+                // "Error building tflite model". The .part is kept so the next attempt resumes.
+                if (total > 0 && downloaded != total) {
+                    throw IllegalStateException(
+                        "Descarga incompleta (${downloaded / 1_000_000} MB de ${total / 1_000_000} MB). " +
+                            "Vuelve a intentarlo para reanudarla.",
+                    )
+                }
             }
         }
         connection.disconnect()
+
+        // Guards against a body that completed but isn't a model at all (an error page served
+        // with 200, say): no real bundle is this small.
+        if (part.length() < AiConstants.MIN_PLAUSIBLE_MODEL_BYTES) {
+            part.delete()
+            throw IllegalStateException(
+                "El archivo descargado no parece un modelo válido (${part.length() / 1_000} KB). " +
+                    "Revisa la URL.",
+            )
+        }
 
         if (!part.renameTo(dest)) {
             part.copyTo(dest, overwrite = true)
@@ -112,6 +135,14 @@ class ModelDownloader @Inject constructor(
         context.contentResolver.openInputStream(uri)?.use { input ->
             part.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
         } ?: throw IllegalStateException("No se pudo abrir el archivo")
+
+        if (part.length() < AiConstants.MIN_PLAUSIBLE_MODEL_BYTES) {
+            part.delete()
+            throw IllegalStateException(
+                "Ese archivo no parece un modelo válido (${part.length() / 1_000} KB). " +
+                    "Debe ser un .task o .bin de MediaPipe.",
+            )
+        }
 
         if (!part.renameTo(dest)) {
             part.copyTo(dest, overwrite = true)

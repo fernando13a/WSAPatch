@@ -15,6 +15,14 @@ object AiConstants {
     const val MODEL_SUBDIR = "models"
 
     /**
+     * Floor for "this file could plausibly be a model". Real MediaPipe bundles run to hundreds of
+     * megabytes, so anything under this is an error page served with a 200, or a download that
+     * barely started — both of which would otherwise be stored as the model and only surface later
+     * as an unreadable "Error building tflite model" from the native engine.
+     */
+    const val MIN_PLAUSIBLE_MODEL_BYTES = 20L * 1024 * 1024
+
+    /**
      * Default download URL for the model — a public, direct-download link to a MediaPipe-compatible
      * `.task` (here, Gemma 3 1B int4 hosted as a GitHub Release asset). Downloading uses the network
      * once; inference afterwards is fully offline. Leave blank to require the user to paste one.
