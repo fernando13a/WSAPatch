@@ -25,28 +25,77 @@ object DefaultExercises {
     private val json = Json { ignoreUnknownKeys = true }
     private const val CATALOG_ASSET = "exercises_catalog.json"
 
+    /**
+     * Demo images live in the bundled public-domain catalog, keyed by its own names. The curated
+     * Spanish entries use the short gym name ("Back Squat") where free-exercise-db spells out the
+     * implement ("Barbell Squat"), so the overlap needs an explicit alias table. Without it the
+     * curated exercises — the ones in the starter routines, i.e. the first ones anybody opens —
+     * would be the only exercises in the whole app with no reference image at all.
+     */
+    val imageAliases: Map<String, String> = mapOf(
+        "Barbell Bench Press" to "Barbell Bench Press - Medium Grip",
+        "Cable Fly" to "Cable Crossover",
+        "Overhead Press" to "Barbell Shoulder Press",
+        "Lateral Raise" to "Side Lateral Raise",
+        "Overhead Triceps Extension" to "Cable Rope Overhead Triceps Extension",
+        "Deadlift" to "Barbell Deadlift",
+        "Pull-Up" to "Pullups",
+        "Bent-Over Barbell Row" to "Bent Over Barbell Row",
+        "Lat Pulldown" to "Wide-Grip Lat Pulldown",
+        "Hammer Curl" to "Hammer Curls",
+        "Back Squat" to "Barbell Squat",
+        "Leg Curl" to "Lying Leg Curls",
+        "Hip Thrust" to "Barbell Hip Thrust",
+        "Standing Calf Raise" to "Standing Calf Raises",
+    )
+
+    /** Names of the hand-written Spanish entries, for alias validation and the image backfill. */
+    val curatedNames: Set<String> get() = catalog.mapTo(mutableSetOf()) { it.name }
+
     /** Inserts the starter catalog and routines if the exercises table is empty. */
     suspend fun seed(dao: WorkoutDao, context: Context) {
         if (dao.countExercises() > 0) return
-        dao.upsertExercises(catalog)
+
+        val bundled = loadBundledCatalog(context)
+        val demoImages = demoImageIndex(bundled)
+        dao.upsertExercises(catalog.map { it.copy(imageUrl = demoImageFor(it.name, demoImages)) })
         seedRoutines(dao)
-        seedBundledCatalog(dao, context)
+
+        val curated = curatedNames.mapTo(mutableSetOf()) { it.lowercase() }
+        val extras = bundled.filterNot { it.name.lowercase() in curated }.map { it.toEntity() }
+        if (extras.isNotEmpty()) dao.upsertExercises(extras)
     }
 
-    /** Imports the bundled public-domain exercise catalog (best-effort; never breaks first launch). */
-    private suspend fun seedBundledCatalog(dao: WorkoutDao, context: Context) {
-        runCatching {
-            val text = context.assets.open(CATALOG_ASSET).bufferedReader().use { it.readText() }
-            val curatedNames = catalog.mapTo(mutableSetOf()) { it.name.lowercase() }
-            val extras = json
-                .decodeFromString(ListSerializer(CatalogExerciseDto.serializer()), text)
-                .asSequence()
-                .filter { it.name.lowercase() !in curatedNames }
-                .map { it.toEntity() }
-                .toList()
-            if (extras.isNotEmpty()) dao.upsertExercises(extras)
+    /**
+     * Gives the curated exercises their demo image on installs seeded before the alias table
+     * existed. Only looks at curated rows that are still missing a URL, so once they're filled it
+     * costs one query and never parses the 800 KB catalog again.
+     */
+    suspend fun backfillDemoImages(dao: WorkoutDao, context: Context) {
+        val curated = curatedNames.mapTo(mutableSetOf()) { it.lowercase() }
+        val missing = dao.getAllExercisesOnce()
+            .filter { it.imageUrl == null && it.name.lowercase() in curated }
+        if (missing.isEmpty()) return
+
+        val demoImages = demoImageIndex(loadBundledCatalog(context))
+        val patched = missing.mapNotNull { exercise ->
+            demoImageFor(exercise.name, demoImages)?.let { exercise.copy(imageUrl = it) }
         }
+        if (patched.isNotEmpty()) dao.upsertExercises(patched)
     }
+
+    /** Reads the bundled catalog; best-effort, so a missing/corrupt asset never breaks startup. */
+    private fun loadBundledCatalog(context: Context): List<CatalogExerciseDto> = runCatching {
+        val text = context.assets.open(CATALOG_ASSET).bufferedReader().use { it.readText() }
+        json.decodeFromString(ListSerializer(CatalogExerciseDto.serializer()), text)
+    }.getOrDefault(emptyList())
+
+    private fun demoImageIndex(bundled: List<CatalogExerciseDto>): Map<String, String> =
+        bundled.mapNotNull { dto -> dto.imageUrl?.let { dto.name.lowercase() to it } }.toMap()
+
+    /** Resolves an exercise's demo image by exact catalog name, then by [imageAliases]. */
+    fun demoImageFor(name: String, index: Map<String, String>): String? =
+        index[name.lowercase()] ?: imageAliases[name]?.let { index[it.lowercase()] }
 
     @Serializable
     private data class CatalogExerciseDto(
