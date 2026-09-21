@@ -53,6 +53,12 @@ interface WorkoutRepository {
 
     suspend fun removeExerciseFromRoutine(routineId: Long, exerciseId: Long)
 
+    /**
+     * Moves an exercise already in [routineId] to [position], leaving its prescription alone.
+     * [addExerciseToRoutine] would overwrite sets/reps/rest with its defaults.
+     */
+    suspend fun updateRoutineExercisePosition(routineId: Long, exerciseId: Long, position: Int)
+
     // ---- Sessions & set logs --------------------------------------------------------
     fun observeSessions(): Flow<List<WorkoutSession>>
     fun observeSessionDetails(): Flow<List<SessionDetail>>

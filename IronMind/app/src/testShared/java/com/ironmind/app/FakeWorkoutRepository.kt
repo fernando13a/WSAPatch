@@ -60,6 +60,8 @@ class FakeWorkoutRepository : WorkoutRepository {
     val upsertedExercises = mutableListOf<Exercise>()
     val addedToRoutine = mutableListOf<AddedToRoutineCall>()
     val removedFromRoutine = mutableListOf<Pair<Long, Long>>()
+    /** (routineId, exerciseId, position) for reorders that must leave the prescription intact. */
+    val repositionedInRoutine = mutableListOf<Triple<Long, Long, Int>>()
 
     /** Controllable return value for [getAlternatives], keyed by the exerciseId asked for. */
     var alternativesByExerciseId: Map<Long, List<Exercise>> = emptyMap()
@@ -112,6 +114,9 @@ class FakeWorkoutRepository : WorkoutRepository {
     }
     override suspend fun removeExerciseFromRoutine(routineId: Long, exerciseId: Long) {
         removedFromRoutine += (routineId to exerciseId)
+    }
+    override suspend fun updateRoutineExercisePosition(routineId: Long, exerciseId: Long, position: Int) {
+        repositionedInRoutine += Triple(routineId, exerciseId, position)
     }
 
     // ---- Sessions & set logs ----

@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,8 +50,11 @@ fun ExerciseThumbnail(
     val shape = RoundedCornerShape(10.dp)
     // An attached photo can outlive its file (cache cleared, or a backup restored onto a device
     // where that absolute path means nothing), so fall through to the reference image instead of
-    // letting a dead path mask it.
-    val attached = exercise.imagePath?.takeIf { File(it).exists() }?.let { File(it) }
+    // letting a dead path mask it. Remembered on the path: this renders once per row in lists that
+    // recompose on every keystroke, and exists() is a blocking stat on the main thread.
+    val attached = remember(exercise.imagePath) {
+        exercise.imagePath?.let(::File)?.takeIf { it.exists() }
+    }
     val reference = exercise.imageUrl?.takeIf { allowRemote || !it.startsWith("http") }
     val model = attached ?: reference
 

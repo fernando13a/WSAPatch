@@ -1,25 +1,23 @@
 package com.ironmind.app.data.ai
 
-import android.content.Context
-import androidx.work.BackoffPolicy
-import androidx.work.Data
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.ironmind.app.domain.model.ModelDownloadState
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Robust model download service using WorkManager for persistent background downloads.
- * Handles mobile data warnings, foreground service management, and automatic retries.
+ * Wraps [ModelDownloader] with the metered-connection check: the model is ~550 MB, so the user is
+ * asked before it goes over a connection that bills for it.
+ *
+ * Downloads run in-process and resume via HTTP Range on the next attempt. An earlier version
+ * handed the metered path to a WorkManager worker for background persistence, but that worker
+ * could never be instantiated (it took a constructor argument no WorkerFactory supplied), reported
+ * failures to WorkManager as successes, and nothing observed its result — so the screen hung
+ * forever on "downloading". The direct path is what actually worked, so it is the only one now.
  */
 @Singleton
 class RobustModelDownloadService @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val downloader: ModelDownloader,
     private val connectivity: NetworkConnectivityService,
 ) {
@@ -44,47 +42,6 @@ class RobustModelDownloadService @Inject constructor(
         downloader.download(url).collect { emit(it) }
     }
 
-    /**
-     * User confirmed download over mobile data; proceed with WorkManager for persistence.
-     */
-    fun confirmAndDownload(url: String) {
-        val workRequest = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
-            .setInputData(
-                Data.Builder()
-                    .putString(ModelDownloadWorker.PARAM_URL, url)
-                    .build()
-            )
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "model_download",
-            androidx.work.ExistingWorkPolicy.KEEP,
-            workRequest,
-        )
-    }
-
-    /**
-     * Direct download (e.g., when already confirmed or on WiFi). Falls back to WorkManager
-     * if download exceeds 30 seconds (for foreground service persistence).
-     */
-    fun download(url: String): Flow<ModelDownloadState> = flow {
-        // Try direct download first
-        var isComplete = false
-        var lastError: Throwable? = null
-
-        downloader.download(url).collect { state ->
-            emit(state)
-            when (state) {
-                ModelDownloadState.Ready -> isComplete = true
-                is ModelDownloadState.Error -> lastError = Exception(state.message)
-                else -> {} // Keep going
-            }
-        }
-
-        // If download failed and took too long, delegate to WorkManager for retry
-        if (!isComplete && lastError != null) {
-            confirmAndDownload(url)
-        }
-    }
+    /** The user accepted the data cost; download over the metered connection. */
+    fun confirmAndDownload(url: String): Flow<ModelDownloadState> = downloader.download(url)
 }

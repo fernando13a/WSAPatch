@@ -97,6 +97,19 @@ class ModelDownloader @Inject constructor(
                             "Vuelve a intentarlo para reanudarla.",
                     )
                 }
+                // Chunked responses report no length, so there is nothing to compare against and
+                // a truncation here is indistinguishable from a clean finish. Verify the server
+                // agrees on the size before trusting it.
+                if (total <= 0) {
+                    val actual = part.length()
+                    val expected = headContentLength(url)
+                    if (expected > 0 && actual != expected) {
+                        throw IllegalStateException(
+                            "Descarga incompleta (${actual / 1_000_000} MB de " +
+                                "${expected / 1_000_000} MB). Vuelve a intentarlo para reanudarla.",
+                        )
+                    }
+                }
             }
         }
         connection.disconnect()
@@ -119,6 +132,21 @@ class ModelDownloader @Inject constructor(
     }.catch { throwable ->
         emit(ModelDownloadState.Error(throwable.message ?: "Error de descarga"))
     }.flowOn(dispatchers.io)
+
+    /** The server's size for [url], or -1 when it won't say. Used only to verify a chunked body. */
+    private fun headContentLength(url: String): Long = runCatching {
+        val head = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "HEAD"
+            connectTimeout = 15_000
+            readTimeout = 15_000
+        }
+        try {
+            head.connect()
+            if (head.responseCode in 200..299) head.contentLengthLong else -1L
+        } finally {
+            head.disconnect()
+        }
+    }.getOrDefault(-1L)
 
     /**
      * Copies a model the user already downloaded to their device (picked via the Storage Access

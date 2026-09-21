@@ -9,8 +9,10 @@ import com.ironmind.app.core.util.DispatcherProvider
 import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.ai.LlmModelNotFoundException
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Mutex
@@ -51,7 +53,10 @@ class LlmInferenceManager @Inject constructor(
     private var engine: LlmInference? = null
 
     override suspend fun isModelAvailable(): Boolean = withContext(dispatchers.io) {
-        resolveModelFile().exists()
+        // Same bar as ModelDownloader.isReady(): a stub or half-written file must not switch the
+        // AI features on, or the screens hide the download prompt and every request fails in
+        // createEngine instead.
+        resolveModelFile().let { it.exists() && it.length() >= AiConstants.MIN_PLAUSIBLE_MODEL_BYTES }
     }
 
     override fun generateResponseStream(prompt: String): Flow<String> = callbackFlow {
@@ -74,7 +79,12 @@ class LlmInferenceManager @Inject constructor(
 
             awaitClose { session.close() }
         }
-    }.flowOn(dispatchers.io)
+    }
+        // The native callback is not backpressure-aware and trySend drops what doesn't fit, while
+        // consumers recompose per chunk — far slower than generation. On callbackFlow's default
+        // 64-element buffer that silently deletes words from the middle of an answer.
+        .buffer(Channel.UNLIMITED)
+        .flowOn(dispatchers.io)
 
     /**
      * Releases the engine — but only if no generation is currently in flight. A generation in

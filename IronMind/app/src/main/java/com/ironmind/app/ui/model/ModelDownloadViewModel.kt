@@ -47,10 +47,12 @@ class ModelDownloadViewModel @Inject constructor(
         }
     }
 
-    /** User confirmed download over mobile data; proceed with WorkManager for persistence. */
+    /** User accepted the data cost; download over the metered connection, streaming progress. */
     fun confirmDownloadOnMobileData(url: String) {
-        robustDownloader.confirmAndDownload(url.trim())
-        _state.value = ModelDownloadState.Downloading(null)
+        if (url.isBlank()) return
+        viewModelScope.launch {
+            robustDownloader.confirmAndDownload(url.trim()).collect { _state.value = it }
+        }
     }
 
     /** Direct download (for WiFi or custom URLs). */

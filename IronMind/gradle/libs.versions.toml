@@ -36,9 +36,6 @@ mediapipeGenai = "0.10.24"
 # On-device OCR (ML Kit, bundled Latin model — reads plate/dumbbell markings fully offline)
 mlkitTextRecognition = "16.0.1"
 
-# Background tasks (robust model downloads, work scheduling)
-workManager = "2.9.1"
-
 # Testing
 junit = "4.13.2"
 androidxJunit = "1.2.1"
@@ -89,9 +86,6 @@ mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", 
 
 # On-device OCR — bundled model, so reading a weight photo never needs the network
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
-
-# WorkManager for persistent background downloads
-androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

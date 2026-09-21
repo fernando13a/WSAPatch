@@ -23,11 +23,14 @@ class NetworkConnectivityService @Inject constructor(
         val network = cm.activeNetwork ?: return NetworkConnectivity.NONE
         val caps = cm.getNetworkCapabilities(network) ?: return NetworkConnectivity.NONE
 
-        return when {
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) -> NetworkConnectivity.WIFI
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkConnectivity.WIFI
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkConnectivity.MOBILE
-            else -> NetworkConnectivity.MOBILE
+        // Metered is the question that matters for a ~550 MB download, and it isn't the same as
+        // "cellular": a phone on someone's hotspot, or on metered hotel wifi, has TRANSPORT_WIFI
+        // and still bills for every byte. Treating any wifi as free skipped the warning exactly
+        // where it was needed most.
+        return if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) {
+            NetworkConnectivity.WIFI
+        } else {
+            NetworkConnectivity.MOBILE
         }
     }
 

@@ -3,7 +3,6 @@ package com.ironmind.app.data
 import com.ironmind.app.core.util.DispatcherProvider
 import com.ironmind.app.data.local.dao.WorkoutDao
 import com.ironmind.app.data.local.seed.DefaultExercises
-import com.ironmind.app.domain.ai.ExerciseTranslationService
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.usecase.AppInitializer
 import com.ironmind.app.domain.usecase.PopulateSpanishExerciseNamesUseCase
@@ -18,7 +17,6 @@ import javax.inject.Singleton
 @Singleton
 class AppInitializerImpl @Inject constructor(
     private val repository: WorkoutRepository,
-    private val translationService: ExerciseTranslationService,
     private val dao: WorkoutDao,
     private val dispatchers: DispatcherProvider,
 ) : AppInitializer {
@@ -28,8 +26,8 @@ class AppInitializerImpl @Inject constructor(
             // Idempotent: a no-op once every curated exercise points at its bundled image.
             DefaultExercises.backfillDemoImages(dao)
 
-            // Populate Spanish exercise names (once, then cached in DB)
-            PopulateSpanishExerciseNamesUseCase(repository, translationService).invoke()
+            // Vocabulary-only, so this stays instant and never touches the inference engine.
+            PopulateSpanishExerciseNamesUseCase(repository).invoke()
         }
     }
 }

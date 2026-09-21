@@ -90,6 +90,17 @@ interface WorkoutDao {
     @Query("DELETE FROM routine_exercise_cross_ref WHERE routineId = :routineId AND exerciseId = :exerciseId")
     suspend fun removeExerciseFromRoutine(routineId: Long, exerciseId: Long)
 
+    /**
+     * Reorders an exercise already in a routine. Separate from the @Upsert above because that one
+     * replaces the whole row: reordering through it would reset the per-exercise sets/reps/rest to
+     * whatever defaults the caller passed.
+     */
+    @Query(
+        "UPDATE routine_exercise_cross_ref SET position = :position " +
+            "WHERE routineId = :routineId AND exerciseId = :exerciseId",
+    )
+    suspend fun updateRoutineExercisePosition(routineId: Long, exerciseId: Long, position: Int)
+
     // ---- Routine + exercises relation ----
     @Transaction
     @Query("SELECT * FROM routines ORDER BY position ASC, createdAt ASC")

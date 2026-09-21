@@ -38,7 +38,7 @@ class ModelDownloadScreenTest {
         val dispatchers = StandardDispatcherProvider()
         val downloader = ModelDownloader(context, dispatchers)
         val connectivity = NetworkConnectivityService(context)
-        val robustDownloader = RobustModelDownloadService(context, downloader, connectivity)
+        val robustDownloader = RobustModelDownloadService(downloader, connectivity)
         return ModelDownloadViewModel(downloader, robustDownloader, SavedStateHandle())
     }
 

@@ -42,6 +42,8 @@ data class ExerciseDto(
     val instructions: String? = null,
     val imagePath: String? = null,
     val imageUrl: String? = null,
+    /** Added to ExerciseEntity in migration 3->4; older backups simply have no value for it. */
+    val nameEs: String? = null,
 )
 
 @Serializable
@@ -92,8 +94,10 @@ data class SetLogDto(
 
 // ---- Entity <-> DTO mapping ---------------------------------------------------------------
 
-fun ExerciseEntity.toDto() =
-    ExerciseDto(id, name, muscleGroup.name, equipment.name, description, isCustom, instructions, imagePath, imageUrl)
+fun ExerciseEntity.toDto() = ExerciseDto(
+    id, name, muscleGroup.name, equipment.name, description, isCustom, instructions,
+    imagePath, imageUrl, nameEs,
+)
 fun ExerciseDto.toEntity() = ExerciseEntity(
     id = id,
     name = name,
@@ -104,6 +108,7 @@ fun ExerciseDto.toEntity() = ExerciseEntity(
     instructions = instructions,
     imagePath = imagePath,
     imageUrl = imageUrl,
+    nameEs = nameEs,
 )
 
 fun RoutineEntity.toDto() = RoutineDto(id, name, split.name, description, position, createdAt)

@@ -25,9 +25,11 @@ val STANDARD_PLATES_LB = listOf(2.5, 5.0, 10.0, 15.0, 25.0, 35.0, 45.0, 55.0)
 private const val MIN_PLAUSIBLE = 0.5
 private const val MAX_PLAUSIBLE = 200.0
 
-// A number (optionally decimal, comma or dot) followed by an optional unit word.
+// A number (optionally decimal, comma or dot) followed by an optional unit word. The digit
+// boundaries matter: without them "2021" is read as "202" (dropped as implausible) and then "1",
+// which is offered to the user as a 1 kg plate. A serial number has to be rejected whole.
 private val TOKEN = Regex(
-    """(\d{1,3}(?:[.,]\d{1,2})?)\s*(kgs?|kilos?|lbs?|libras?|pounds?)?""",
+    """(?<!\d)(\d{1,3}(?:[.,]\d{1,2})?)(?!\d)\s*(kgs?|kilos?|lbs?|libras?|pounds?)?""",
     RegexOption.IGNORE_CASE,
 )
 

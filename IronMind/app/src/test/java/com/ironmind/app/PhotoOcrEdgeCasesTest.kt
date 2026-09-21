@@ -75,10 +75,19 @@ class PhotoOcrEdgeCasesTest {
     }
 
     @Test
-    fun ignoratesSerialNumbers() {
+    fun ignoresSerialNumbers() {
         val result = parseDetectedWeights("Serial: 2021, Weight: 25 kg")
-        // Should find 2021 (plausible), 25 (with unit)
-        assertEquals(2, result.size)
+
+        // Only the 25 kg. A 4-digit run is rejected whole: it used to be split into "202"
+        // (dropped as implausible) and a leftover "1", which was then offered as a 1 kg plate.
+        assertEquals(1, result.size)
+        assertEquals(25.0, result.single().value, EPSILON)
+    }
+
+    @Test
+    fun ignoresLongDigitRunsEntirely() {
+        assertEquals(emptyList<Any>(), parseDetectedWeights("SKU 1234567"))
+        assertEquals(emptyList<Any>(), parseDetectedWeights("Model 1234"))
     }
 
     @Test

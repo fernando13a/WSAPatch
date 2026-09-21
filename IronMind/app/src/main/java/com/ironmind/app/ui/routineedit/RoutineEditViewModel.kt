@@ -104,7 +104,14 @@ class RoutineEditViewModel @Inject constructor(
             val currentIds = state.selected.map { it.id }
             originalIds.filter { it !in currentIds }.forEach { repository.removeExerciseFromRoutine(id, it) }
             currentIds.forEachIndexed { index, exId ->
-                repository.addExerciseToRoutine(routineId = id, exerciseId = exId, position = index)
+                // Only reorder the ones already there: addExerciseToRoutine would replace the row
+                // and reset sets/reps/rest to its defaults, wiping a generated routine's
+                // prescription just because the user renamed it here.
+                if (exId in originalIds) {
+                    repository.updateRoutineExercisePosition(routineId = id, exerciseId = exId, position = index)
+                } else {
+                    repository.addExerciseToRoutine(routineId = id, exerciseId = exId, position = index)
+                }
             }
             onDone()
         }

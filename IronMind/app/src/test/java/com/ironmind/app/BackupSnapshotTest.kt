@@ -19,6 +19,9 @@ class BackupSnapshotTest {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    // Every nullable column carries a value here on purpose: a field the DTO forgets is invisible
+    // to a round-trip test whose fixture left it null on both sides — which is exactly how nameEs
+    // went missing from backups unnoticed.
     private val exercise = ExerciseEntity(
         id = 7,
         name = "Bench Press",
@@ -26,6 +29,10 @@ class BackupSnapshotTest {
         equipment = Equipment.BARBELL,
         description = "Flat barbell press",
         isCustom = false,
+        instructions = "1) Lie down. 2) Press.",
+        imagePath = "/data/user/0/com.ironmind.app/files/bench.jpg",
+        imageUrl = "file:///android_asset/exercise_images/barbell_bench_press.jpg",
+        nameEs = "Press de Banca",
     )
     private val routine = RoutineEntity(id = 3, name = "Push", split = RoutineSplit.PUSH, position = 1, createdAt = 1000L)
     private val crossRef = RoutineExerciseCrossRef(routineId = 3, exerciseId = 7, position = 0, targetSets = 4, targetReps = 8, targetRestSeconds = 120)

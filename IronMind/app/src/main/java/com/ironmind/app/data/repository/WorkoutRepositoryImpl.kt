@@ -115,6 +115,11 @@ class WorkoutRepositoryImpl @Inject constructor(
             dao.removeExerciseFromRoutine(routineId, exerciseId)
         }
 
+    override suspend fun updateRoutineExercisePosition(routineId: Long, exerciseId: Long, position: Int) =
+        withContext(dispatchers.io) {
+            dao.updateRoutineExercisePosition(routineId, exerciseId, position)
+        }
+
     // ---- Sessions & set logs --------------------------------------------------------
     override fun observeSessions(): Flow<List<WorkoutSession>> =
         dao.observeSessions().map { list -> list.map { it.toDomain() } }
