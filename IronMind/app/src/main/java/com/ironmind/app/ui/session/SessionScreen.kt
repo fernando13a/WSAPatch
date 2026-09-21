@@ -71,6 +71,7 @@ import com.ironmind.app.domain.util.displayUnitToKg
 import com.ironmind.app.domain.util.toDisplayUnit
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.CircularRestTimer
+import com.ironmind.app.ui.components.ExerciseThumbnail
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.LabeledValue
 import com.ironmind.app.ui.components.SectionTitle
@@ -302,10 +303,14 @@ private fun AddSetCard(
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 exercises.forEach { exercise ->
-                    DropdownMenuItem(text = { Text(exercise.displayName()) }, onClick = {
-                        onSelectedIdChange(exercise.id)
-                        expanded = false
-                    })
+                    DropdownMenuItem(
+                        text = { Text(exercise.displayName()) },
+                        leadingIcon = { ExerciseThumbnail(exercise = exercise, size = 36.dp) },
+                        onClick = {
+                            onSelectedIdChange(exercise.id)
+                            expanded = false
+                        },
+                    )
                 }
             }
         }
@@ -493,6 +498,10 @@ private fun ExerciseBlockCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            block.exercise?.let { exercise ->
+                ExerciseThumbnail(exercise = exercise, size = 48.dp)
+                Spacer(Modifier.width(12.dp))
+            }
             Text(
                 block.exerciseName,
                 style = androidx.compose.material3.MaterialTheme.typography.titleLarge,

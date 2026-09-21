@@ -8,6 +8,8 @@ data class ExerciseBlockUi(
     val exerciseId: Long,
     val exerciseName: String,
     val sets: List<SetLog>,
+    /** The catalog entry, for the row's thumbnail; null if the exercise was deleted from it. */
+    val exercise: Exercise? = null,
 )
 
 data class SessionUiState(

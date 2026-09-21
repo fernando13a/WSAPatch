@@ -24,62 +24,62 @@ object DefaultExercises {
 
     private val json = Json { ignoreUnknownKeys = true }
     private const val CATALOG_ASSET = "exercises_catalog.json"
+    private const val IMAGE_ASSET_DIR = "exercise_images"
+
+    /** Names of the hand-written Spanish entries. */
+    val curatedNames: Set<String> get() = catalog.mapTo(mutableSetOf()) { it.name }
 
     /**
-     * Demo images live in the bundled public-domain catalog, keyed by its own names. The curated
-     * Spanish entries use the short gym name ("Back Squat") where free-exercise-db spells out the
-     * implement ("Barbell Squat"), so the overlap needs an explicit alias table. Without it the
-     * curated exercises — the ones in the starter routines, i.e. the first ones anybody opens —
-     * would be the only exercises in the whole app with no reference image at all.
+     * Curated exercises whose reference image ships inside the APK (`assets/exercise_images`).
+     * These are the lifts in the starter routines — the ones opened most — so they're worth ~1.5 MB
+     * to have work with no connection at all. Everything else in the 876-exercise catalog keeps
+     * its remote URL and fetches on demand; bundling all of them would balloon the download.
+     *
+     * The images come from free-exercise-db (The Unlicense), pulled via the catalog entry for each
+     * lift — its spelling differs ("Back Squat" is "Barbell Squat" there), which is why the files
+     * are named after the curated name instead. Listed explicitly rather than derived from
+     * [curatedNames], so adding an exercise without dropping its JPEG in fails the test below
+     * instead of silently pointing Coil at a missing asset.
      */
-    val imageAliases: Map<String, String> = mapOf(
-        "Barbell Bench Press" to "Barbell Bench Press - Medium Grip",
-        "Cable Fly" to "Cable Crossover",
-        "Overhead Press" to "Barbell Shoulder Press",
-        "Lateral Raise" to "Side Lateral Raise",
-        "Overhead Triceps Extension" to "Cable Rope Overhead Triceps Extension",
-        "Deadlift" to "Barbell Deadlift",
-        "Pull-Up" to "Pullups",
-        "Bent-Over Barbell Row" to "Bent Over Barbell Row",
-        "Lat Pulldown" to "Wide-Grip Lat Pulldown",
-        "Hammer Curl" to "Hammer Curls",
-        "Back Squat" to "Barbell Squat",
-        "Leg Curl" to "Lying Leg Curls",
-        "Hip Thrust" to "Barbell Hip Thrust",
-        "Standing Calf Raise" to "Standing Calf Raises",
+    val bundledImageNames: Set<String> = setOf(
+        "Barbell Bench Press", "Incline Dumbbell Press", "Cable Fly", "Overhead Press",
+        "Lateral Raise", "Triceps Pushdown", "Overhead Triceps Extension", "Deadlift",
+        "Pull-Up", "Bent-Over Barbell Row", "Lat Pulldown", "Face Pull", "Barbell Curl",
+        "Hammer Curl", "Back Squat", "Leg Press", "Romanian Deadlift", "Leg Curl",
+        "Hip Thrust", "Standing Calf Raise", "Hanging Leg Raise", "Cable Crunch", "Plank",
     )
 
-    /** Names of the hand-written Spanish entries, for alias validation and the image backfill. */
-    val curatedNames: Set<String> get() = catalog.mapTo(mutableSetOf()) { it.name }
+    /** `file://` URI Coil resolves straight out of the APK's assets — no network involved. */
+    fun bundledImageFor(name: String): String? =
+        if (name in bundledImageNames) "file:///android_asset/$IMAGE_ASSET_DIR/${assetSlug(name)}.jpg" else null
+
+    /** "Bent-Over Barbell Row" -> "bent_over_barbell_row", matching the shipped file names. */
+    private fun assetSlug(name: String): String =
+        name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
     /** Inserts the starter catalog and routines if the exercises table is empty. */
     suspend fun seed(dao: WorkoutDao, context: Context) {
         if (dao.countExercises() > 0) return
 
-        val bundled = loadBundledCatalog(context)
-        val demoImages = demoImageIndex(bundled)
-        dao.upsertExercises(catalog.map { it.copy(imageUrl = demoImageFor(it.name, demoImages)) })
+        dao.upsertExercises(catalog.map { it.copy(imageUrl = bundledImageFor(it.name)) })
         seedRoutines(dao)
 
         val curated = curatedNames.mapTo(mutableSetOf()) { it.lowercase() }
-        val extras = bundled.filterNot { it.name.lowercase() in curated }.map { it.toEntity() }
+        val extras = loadBundledCatalog(context)
+            .filterNot { it.name.lowercase() in curated }
+            .map { it.toEntity() }
         if (extras.isNotEmpty()) dao.upsertExercises(extras)
     }
 
     /**
-     * Gives the curated exercises their demo image on installs seeded before the alias table
-     * existed. Only looks at curated rows that are still missing a URL, so once they're filled it
-     * costs one query and never parses the 800 KB catalog again.
+     * Points the curated exercises at their bundled image on installs seeded before it shipped
+     * (they were stored with no image at all, or with the remote URL). Idempotent: once every row
+     * already matches, this writes nothing, so it's safe to run on every start.
      */
-    suspend fun backfillDemoImages(dao: WorkoutDao, context: Context) {
-        val curated = curatedNames.mapTo(mutableSetOf()) { it.lowercase() }
-        val missing = dao.getAllExercisesOnce()
-            .filter { it.imageUrl == null && it.name.lowercase() in curated }
-        if (missing.isEmpty()) return
-
-        val demoImages = demoImageIndex(loadBundledCatalog(context))
-        val patched = missing.mapNotNull { exercise ->
-            demoImageFor(exercise.name, demoImages)?.let { exercise.copy(imageUrl = it) }
+    suspend fun backfillDemoImages(dao: WorkoutDao) {
+        val patched = dao.getAllExercisesOnce().mapNotNull { exercise ->
+            val bundled = bundledImageFor(exercise.name) ?: return@mapNotNull null
+            exercise.takeIf { it.imageUrl != bundled }?.copy(imageUrl = bundled)
         }
         if (patched.isNotEmpty()) dao.upsertExercises(patched)
     }
@@ -89,13 +89,6 @@ object DefaultExercises {
         val text = context.assets.open(CATALOG_ASSET).bufferedReader().use { it.readText() }
         json.decodeFromString(ListSerializer(CatalogExerciseDto.serializer()), text)
     }.getOrDefault(emptyList())
-
-    private fun demoImageIndex(bundled: List<CatalogExerciseDto>): Map<String, String> =
-        bundled.mapNotNull { dto -> dto.imageUrl?.let { dto.name.lowercase() to it } }.toMap()
-
-    /** Resolves an exercise's demo image by exact catalog name, then by [imageAliases]. */
-    fun demoImageFor(name: String, index: Map<String, String>): String? =
-        index[name.lowercase()] ?: imageAliases[name]?.let { index[it.lowercase()] }
 
     @Serializable
     private data class CatalogExerciseDto(

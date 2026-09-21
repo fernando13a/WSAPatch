@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -51,6 +52,7 @@ import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.ui.components.AccentButton
+import com.ironmind.app.ui.components.ExerciseThumbnail
 import com.ironmind.app.ui.components.GlassCard
 import com.ironmind.app.ui.components.SectionTitle
 import com.ironmind.app.ui.util.displayName
@@ -135,6 +137,8 @@ fun RoutineEditScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            ExerciseThumbnail(exercise = exercise, size = 40.dp)
+                            Spacer(Modifier.width(10.dp))
                             Text(
                                 stringResource(R.string.numbered_exercise, index + 1, exercise.displayName()),
                                 modifier = Modifier
@@ -190,6 +194,8 @@ fun RoutineEditScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                ExerciseThumbnail(exercise = exercise, size = 40.dp)
+                                Spacer(Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(exercise.displayName())
                                     Text(

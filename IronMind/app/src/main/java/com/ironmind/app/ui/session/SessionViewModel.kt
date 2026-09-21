@@ -79,6 +79,7 @@ class SessionViewModel @Inject constructor(
         routinePlanFlow,
     ) { detail, exercises, plan ->
         val names = exercises.associate { it.id to it.displayName() }
+        val exercisesById = exercises.associateBy { it.id }
         val setsByExercise = (detail?.sets ?: emptyList()).groupBy { it.exerciseId }
 
         val orderedIds = buildList {
@@ -99,6 +100,7 @@ class SessionViewModel @Inject constructor(
                     exerciseId = id,
                     exerciseName = names[id] ?: "Ejercicio",
                     sets = setsByExercise[id]?.sortedBy { it.setNumber } ?: emptyList(),
+                    exercise = exercisesById[id],
                 )
             },
             availableExercises = exercises,
