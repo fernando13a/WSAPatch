@@ -49,7 +49,12 @@ class ModelDownloadViewModel @Inject constructor(
 
     /** User accepted the data cost; download over the metered connection, streaming progress. */
     fun confirmDownloadOnMobileData(url: String) {
-        if (url.isBlank() || _state.value is ModelDownloadState.Downloading) return
+        // Verifying counts as in-flight: a second download here would append into the
+        // same .part as the one being hashed.
+        val busy = _state.value.let {
+            it is ModelDownloadState.Downloading || it is ModelDownloadState.Verifying
+        }
+        if (url.isBlank() || busy) return
         // Set synchronously: the confirmation dialog is mounted on the Awaiting state and isn't
         // dismissed by its own button, so leaving the flip until the first emission crosses the IO
         // dispatcher leaves it tappable — and a second tap starts a second download appending into

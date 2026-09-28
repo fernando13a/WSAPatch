@@ -6,6 +6,7 @@ import com.ironmind.app.core.util.DispatcherProvider
 import com.ironmind.app.domain.model.ModelDownloadState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -136,6 +137,8 @@ class ModelDownloader @Inject constructor(
             )
         }
 
+        verifyContentOrDelete(part)
+
         if (!part.renameTo(dest)) {
             part.copyTo(dest, overwrite = true)
             part.delete()
@@ -144,6 +147,34 @@ class ModelDownloader @Inject constructor(
     }.catch { throwable ->
         emit(ModelDownloadState.Error(throwable.message ?: "Error de descarga"))
     }.flowOn(dispatchers.io)
+
+    /**
+     * Rejects a download that arrived at the right length with the wrong bytes.
+     *
+     * Every length check above can pass and the file still be wrong: a resumed request whose range
+     * landed at the wrong offset, or two downloads appending into this same `.part`, both end at
+     * [AiConstants.EXPECTED_MODEL_BYTES] with scrambled contents. Stored as-is, that only surfaces
+     * much later as an opaque native "Error building tflite model" — which reads as an unsupported
+     * model, not a damaged file, and sends everyone chasing the wrong bug.
+     *
+     * Only applies to the known bundle: a model imported or fetched from another URL has a
+     * different hash and is left alone.
+     */
+    private suspend fun FlowCollector<ModelDownloadState>.verifyContentOrDelete(part: java.io.File) {
+        if (part.length() != AiConstants.EXPECTED_MODEL_BYTES) return
+        if (AiConstants.EXPECTED_MODEL_SHA256.isBlank()) return
+
+        emit(ModelDownloadState.Verifying)
+        val actual = ModelIntegrity.sha256(part)
+        if (!actual.equals(AiConstants.EXPECTED_MODEL_SHA256, ignoreCase = true)) {
+            // Deleted rather than kept: resuming on top of scrambled bytes would only reproduce it.
+            part.delete()
+            throw IllegalStateException(
+                "La descarga terminó con el tamaño correcto pero el contenido no coincide con el " +
+                    "original, así que se descartó. Vuelve a intentarlo sin salir de esta pantalla.",
+            )
+        }
+    }
 
     /** The server's size for [url], or -1 when it won't say. Used only to verify a chunked body. */
     private fun headContentLength(url: String): Long = runCatching {
@@ -183,6 +214,8 @@ class ModelDownloader @Inject constructor(
                     "Debe ser un .task o .bin de MediaPipe.",
             )
         }
+
+        verifyContentOrDelete(part)
 
         if (!part.renameTo(dest)) {
             part.copyTo(dest, overwrite = true)

@@ -214,6 +214,8 @@
     <string name="model_url_label">URL del modelo (.bin / .task)</string>
     <string name="model_downloading_pct">Descargando… %1$d%%</string>
     <string name="model_downloading">Descargando…</string>
+    <string name="model_verifying">Verificando el archivo…</string>
+    <string name="model_verifying_hint">Comprobando que se descargó sin errores. No salgas de esta pantalla.</string>
     <string name="model_ready">Modelo listo ✓</string>
     <string name="model_error">Error: %1$s</string>
     <string name="model_or_import">¿Ya tienes el archivo del modelo en el teléfono?</string>

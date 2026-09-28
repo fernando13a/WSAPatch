@@ -11,6 +11,14 @@ sealed interface ModelDownloadState {
     /** Download running; [progress] is 0f..1f (or null when the size is unknown). */
     data class Downloading(val progress: Float?) : ModelDownloadState
 
+    /**
+     * Bytes are all here; the checksum is being computed. Its own state because hashing half a
+     * gigabyte takes seconds, and a progress bar frozen at 100% with no explanation is what makes
+     * someone tap Download a second time — which is how two writers ended up interleaving into
+     * one `.part` and producing a right-length, wrong-content model in the first place.
+     */
+    data object Verifying : ModelDownloadState
+
     /** Model file present and ready for inference. */
     data object Ready : ModelDownloadState
 

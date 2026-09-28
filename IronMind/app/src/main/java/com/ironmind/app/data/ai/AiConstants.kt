@@ -35,6 +35,19 @@ object AiConstants {
     const val EXPECTED_MODEL_BYTES = 554_661_246L
 
     /**
+     * SHA-256 of that same bundle. The length is not enough on its own: a resumed download that
+     * appended the wrong range — two taps on the download button writing into one `.part`, say —
+     * lands on exactly [EXPECTED_MODEL_BYTES] with scrambled bytes inside, and the engine then
+     * fails in `model_data.cc` with "Error building tflite model", which looks identical to the
+     * model simply being unsupported. Verified against the published asset:
+     * the inner TFLite parses as version 3, 770 subgraphs, signatures
+     * decode / prefill_32 / prefill_128 / prefill_512 / prefill_1024.
+     *
+     * Blank disables content verification (see [ModelIntegrity.Verdict.UNVERIFIABLE]).
+     */
+    const val EXPECTED_MODEL_SHA256 = "ddfaf1210d8b4d1b812b5fadb6652999e852c8be6dd9abe353b9213a25262c10"
+
+    /**
      * Default download URL for the model — a public, direct-download link to a MediaPipe-compatible
      * `.task` (here, Gemma 3 1B int4 hosted as a GitHub Release asset). Downloading uses the network
      * once; inference afterwards is fully offline. Leave blank to require the user to paste one.

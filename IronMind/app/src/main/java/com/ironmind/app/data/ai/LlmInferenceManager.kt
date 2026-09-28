@@ -138,7 +138,13 @@ class LlmInferenceManager @Inject constructor(
         }
 
         val cause = checkNotNull(firstFailure) { "BACKEND_PREFERENCE must not be empty" }
-        throw IllegalStateException(modelLoadFailureMessage(modelFile.length(), cause.message), cause)
+        // Hashing half a gigabyte costs seconds, which is why it only runs here: the engine has
+        // already failed, and this is the one question worth answering before telling someone to
+        // spend another 554 MB of their data plan.
+        throw IllegalStateException(
+            modelLoadFailureMessage(ModelIntegrity.check(modelFile), modelFile.length(), cause.message),
+            cause,
+        )
     }
 
     private fun resolveModelFile(): File = AiConstants.modelFile(context)
@@ -152,29 +158,52 @@ class LlmInferenceManager @Inject constructor(
 /**
  * Turns a native engine failure into something an athlete standing in a gym can act on.
  *
- * The native side reports any load failure as a multi-line C++ RET_CHECK trace, so the only signal
- * worth acting on is the file size. Split out as a pure function because [LlmInferenceManager]
- * needs a [Context] and the native libraries to construct, and this wording is the part that was
- * wrong: it told people to delete and re-download a file that was complete and correct.
+ * The native side reports every load failure the same way — a RET_CHECK trace ending in
+ * "Error building tflite model" — whether the bundle is unsupported or merely damaged. Only
+ * [verdict] separates those, so it, not the raw trace, decides what this tells the user to do.
+ *
+ * Pure so it can be tested: [LlmInferenceManager] needs a [Context] and the native libraries.
  */
-fun modelLoadFailureMessage(sizeBytes: Long, causeMessage: String?): String {
+fun modelLoadFailureMessage(
+    verdict: ModelIntegrity.Verdict,
+    sizeBytes: Long,
+    causeMessage: String?,
+): String {
     val megabytes = sizeBytes / (1024 * 1024)
     val expectedMegabytes = AiConstants.EXPECTED_MODEL_BYTES / (1024 * 1024)
-    if (sizeBytes != AiConstants.EXPECTED_MODEL_BYTES) {
-        return "No se pudo cargar el modelo de IA: el archivo mide $megabytes MB y el modelo por " +
-            "defecto mide $expectedMegabytes MB. Si lo descargaste desde la app está incompleto — " +
-            "ve a Modelo de IA, pulsa «Borrar modelo» y descárgalo otra vez, a ser posible con WiFi."
-    }
-    // Right size, so re-downloading it would waste half a gigabyte and change nothing. Carry the
-    // first line of the native error instead, which is the only part that identifies the cause.
-    val detail = causeMessage
-        ?.lineSequence()
-        ?.map(String::trim)
-        ?.firstOrNull { it.isNotEmpty() }
-        ?.take(140)
-    return buildString {
-        append("El modelo está completo ($megabytes MB), pero el motor de IA no pudo iniciarlo en ")
-        append("este teléfono. Borrarlo y volver a descargarlo no lo arregla.")
-        if (!detail.isNullOrEmpty()) append(" Detalle: $detail")
+    val redownload = "Ve a Modelo de IA, pulsa «Borrar modelo» y descárgalo otra vez, " +
+        "a ser posible con WiFi y sin salir de la pantalla."
+
+    return when (verdict) {
+        ModelIntegrity.Verdict.MISSING ->
+            "No hay ningún modelo de IA en este dispositivo. Ve a Modelo de IA y descárgalo."
+
+        ModelIntegrity.Verdict.WRONG_SIZE ->
+            "El modelo está incompleto: el archivo mide $megabytes MB y debería medir " +
+                "$expectedMegabytes MB. $redownload"
+
+        // The case that cost several rounds of debugging: right length, wrong bytes.
+        ModelIntegrity.Verdict.CORRUPT ->
+            "El archivo del modelo mide lo correcto ($megabytes MB) pero su contenido no coincide " +
+                "con el original, así que se dañó al descargarse. $redownload"
+
+        ModelIntegrity.Verdict.INTACT, ModelIntegrity.Verdict.UNVERIFIABLE -> buildString {
+            append("El modelo está completo y verificado ($megabytes MB), pero el motor de IA no ")
+            append("pudo iniciarlo en este teléfono. Volver a descargarlo no lo arregla.")
+            nativeDetail(causeMessage)?.let { append(" Detalle: $it") }
+        }
     }
 }
+
+/**
+ * The native trace, flattened to one line and capped.
+ *
+ * Kept generous on purpose: the first 140 characters of this particular trace are the RET_CHECK
+ * header and the source path, and the cap used to land exactly on the word that began the actual
+ * reason — so the one line worth reading was the one being cut off.
+ */
+private fun nativeDetail(causeMessage: String?): String? = causeMessage
+    ?.replace(Regex("\\s+"), " ")
+    ?.trim()
+    ?.take(400)
+    ?.takeIf { it.isNotEmpty() }

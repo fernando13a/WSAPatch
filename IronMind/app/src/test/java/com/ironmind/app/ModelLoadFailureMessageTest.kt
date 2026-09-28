@@ -1,80 +1,93 @@
 package com.ironmind.app
 
 import com.ironmind.app.data.ai.AiConstants
+import com.ironmind.app.data.ai.ModelIntegrity.Verdict
 import com.ironmind.app.data.ai.modelLoadFailureMessage
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The wording here is the whole point of the function: the previous message told everyone whose
- * engine failed to delete a half-gigabyte file and download it again, including the people whose
- * file was complete and correct. These assertions pin the two cases apart.
+ * The wording is the whole point of this function. The native engine reports an unsupported bundle
+ * and a damaged one with the identical RET_CHECK trace, so the message is the only thing that can
+ * tell someone whether re-downloading half a gigabyte will help. An earlier version guessed, and
+ * guessed wrong in both directions: it blamed the download for a file that was intact, then
+ * vouched for a file whose contents were scrambled.
  *
- * Note the assertions avoid the substring "completo" on its own — "incompleto" contains it, so it
- * matches both branches and would pass no matter which one ran.
+ * Assertions avoid the bare substring "completo", since "incompleto" contains it and would match
+ * either branch.
  */
 class ModelLoadFailureMessageTest {
 
-    /** Phrase that only ever appears when the file is being blamed. */
-    private val reDownloadAdvice = "«Borrar modelo»"
+    private val redownloadAdvice = "«Borrar modelo»"
+    private val fileIsFine = "completo y verificado"
+    private val size = AiConstants.EXPECTED_MODEL_BYTES
 
     @Test
-    fun aCompleteModelIsNotBlamedOnTheDownload() {
-        val message = modelLoadFailureMessage(AiConstants.EXPECTED_MODEL_BYTES, "RET_CHECK failure")
+    fun anIntactModelIsNotBlamedOnTheDownload() {
+        val message = modelLoadFailureMessage(Verdict.INTACT, size, "RET_CHECK failure")
 
-        assertTrue("should clear the file, was: $message", message.contains("El modelo está completo"))
-        assertFalse("must not send them back to re-download, was: $message", message.contains(reDownloadAdvice))
-    }
-
-    @Test
-    fun aTruncatedModelIsSentBackToTheDownloadScreen() {
-        val message = modelLoadFailureMessage(400L * 1024 * 1024, "RET_CHECK failure")
-
-        assertTrue("should name the delete action, was: $message", message.contains(reDownloadAdvice))
-        assertTrue("should show the actual size, was: $message", message.contains("400 MB"))
-        assertFalse("must not also claim it is fine, was: $message", message.contains("El modelo está completo"))
+        assertTrue("should clear the file, was: $message", message.contains(fileIsFine))
+        assertFalse("re-downloading it would change nothing, was: $message", message.contains(redownloadAdvice))
     }
 
     /**
-     * The bug this function exists for: 554,661,246 bytes is 528.95 MiB, and integer division
-     * prints that as "528" — the same number a file truncated at 528.0 MiB prints. Deciding on the
-     * rounded megabytes called a complete model corrupt, so the branch must key off the byte count.
+     * Right length, wrong bytes — every size check passes and the file is still ruined. This is the
+     * one case where deleting and re-downloading is the actual fix, so it has to say so.
      */
     @Test
-    fun aCompleteFileAndAShortOnePrintTheSameMegabytesAndStillDiffer() {
-        val expected = AiConstants.EXPECTED_MODEL_BYTES
-        val shortButSameMegabytes = 528L * 1024 * 1024 // 553,648,128 B — also prints "528 MB"
+    fun aCorruptModelIsSentBackToTheDownloadScreen() {
+        val message = modelLoadFailureMessage(Verdict.CORRUPT, size, "RET_CHECK failure")
 
-        assertTrue("fixture is wrong: it must be shorter", shortButSameMegabytes < expected)
-        assertEquals(
-            "fixture is wrong: both sizes must print the same MB for this test to mean anything",
-            expected / (1024 * 1024),
-            shortButSameMegabytes / (1024 * 1024),
-        )
-
-        assertTrue(modelLoadFailureMessage(expected, null).contains("El modelo está completo"))
-        assertTrue(modelLoadFailureMessage(shortButSameMegabytes, null).contains(reDownloadAdvice))
+        assertTrue("should name the delete action, was: $message", message.contains(redownloadAdvice))
+        assertFalse("must not vouch for the file, was: $message", message.contains(fileIsFine))
     }
 
     @Test
-    fun onlyTheFirstLineOfTheNativeTraceSurvives() {
-        val trace = """
-            RET_CHECK failure (mediapipe/tasks/cc/genai/inference/utils/llm_utils/model_data.cc:334)
-            Error building tflite model
-            === Source Location Trace: ===
-        """.trimIndent()
+    fun aTruncatedModelReportsBothSizes() {
+        val message = modelLoadFailureMessage(Verdict.WRONG_SIZE, 400L * 1024 * 1024, null)
 
-        val message = modelLoadFailureMessage(AiConstants.EXPECTED_MODEL_BYTES, trace)
+        assertTrue("should show what it has, was: $message", message.contains("400 MB"))
+        assertTrue("should show what it expected, was: $message", message.contains("528 MB"))
+        assertTrue(message.contains(redownloadAdvice))
+    }
 
-        assertTrue(message.contains("RET_CHECK failure"))
-        assertFalse("the trace tail is noise to an athlete, was: $message", message.contains("Source Location"))
+    @Test
+    fun aMissingModelAsksForADownloadRatherThanADelete() {
+        val message = modelLoadFailureMessage(Verdict.MISSING, 0, null)
+
+        assertFalse("nothing to delete, was: $message", message.contains(redownloadAdvice))
+        assertTrue(message.contains("descárgalo"))
+    }
+
+    /** Without a reference hash the file can't be judged, so it gets the benefit of the doubt. */
+    @Test
+    fun anUnverifiableModelIsTreatedLikeAnIntactOne() {
+        val message = modelLoadFailureMessage(Verdict.UNVERIFIABLE, size, "RET_CHECK failure")
+
+        assertFalse(message.contains(redownloadAdvice))
+    }
+
+    /**
+     * The real trace: the first 140 characters are the RET_CHECK header and the source path, and
+     * the old cap landed on the word right before the reason. Everything up to the cap must survive.
+     */
+    @Test
+    fun theNativeReasonSurvivesPastTheHeaderAndPath() {
+        val trace = "Failed to initialize engine: %sINTERNAL: RET_CHECK failure " +
+            "(third_party/odml/infra/genai/inference/utils/llm_utils/model_data.cc:424) " +
+            "model\nError building tflite model"
+
+        val message = modelLoadFailureMessage(Verdict.INTACT, size, trace)
+
+        assertTrue("the reason was cut off again, was: $message", message.contains("Error building tflite model"))
+        assertTrue(message.contains("model_data.cc:424"))
+        assertFalse("newlines make the card unreadable, was: $message", message.contains("\n"))
     }
 
     @Test
     fun aBlankNativeMessageDoesNotLeaveADanglingLabel() {
-        assertFalse(modelLoadFailureMessage(AiConstants.EXPECTED_MODEL_BYTES, null).contains("Detalle:"))
-        assertFalse(modelLoadFailureMessage(AiConstants.EXPECTED_MODEL_BYTES, "   \n  ").contains("Detalle:"))
+        assertFalse(modelLoadFailureMessage(Verdict.INTACT, size, null).contains("Detalle:"))
+        assertFalse(modelLoadFailureMessage(Verdict.INTACT, size, "  \n  ").contains("Detalle:"))
     }
 }

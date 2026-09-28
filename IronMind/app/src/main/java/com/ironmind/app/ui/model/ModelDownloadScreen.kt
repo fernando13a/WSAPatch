@@ -146,6 +146,21 @@ fun ModelDownloadScreen(
                         GlowProgressBar(progress = s.progress ?: 0f)
                     }
 
+                    // Hashing 554 MB takes seconds. Saying so beats a bar stuck at 100%, which is
+                    // what invites a second tap on Download — two writers into one .part is how a
+                    // right-length, wrong-content model got installed in the first place.
+                    ModelDownloadState.Verifying -> Column {
+                        Text(stringResource(R.string.model_verifying), color = Cyan)
+                        Spacer(Modifier.height(8.dp))
+                        GlowProgressBar(progress = 1f)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.model_verifying_hint),
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
                     ModelDownloadState.Ready -> Column {
                         Text(stringResource(R.string.model_ready), color = Cyan, fontWeight = FontWeight.SemiBold)
                         val mb = viewModel.modelSizeBytes() / (1024 * 1024)
@@ -183,7 +198,8 @@ fun ModelDownloadScreen(
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { importLauncher.launch(arrayOf("*/*")) },
-                    enabled = state !is ModelDownloadState.Downloading,
+                    enabled = state !is ModelDownloadState.Downloading &&
+                        state !is ModelDownloadState.Verifying,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.model_import_file), color = Cyan)
