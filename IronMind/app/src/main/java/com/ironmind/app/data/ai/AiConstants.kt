@@ -6,15 +6,6 @@ import java.io.File
 /** Configuration for the on-device MediaPipe LLM Inference engine. */
 object AiConstants {
 
-    /**
-     * Model file name expected under `filesDir/models/`. It is just a container name — MediaPipe
-     * identifies a bundle by its contents, not its extension — so it is deliberately left alone
-     * even though [DEFAULT_MODEL_URL] now points at a Gemma 3 1B `.task`: renaming it would orphan
-     * the half-gigabyte file already on every device that downloaded one. Any MediaPipe-compatible
-     * bundle works. Keeping it out of the APK keeps the binary small while staying 100% offline at
-     * runtime.
-     */
-    const val MODEL_FILE_NAME = "gemma-2b-it-int4.bin"
     const val MODEL_SUBDIR = "models"
 
     /**
@@ -35,13 +26,12 @@ object AiConstants {
     const val EXPECTED_MODEL_BYTES = 554_661_246L
 
     /**
-     * SHA-256 of that same bundle. The length is not enough on its own: a resumed download that
-     * appended the wrong range — two taps on the download button writing into one `.part`, say —
-     * lands on exactly [EXPECTED_MODEL_BYTES] with scrambled bytes inside, and the engine then
-     * fails in `model_data.cc` with "Error building tflite model", which looks identical to the
-     * model simply being unsupported. Verified against the published asset:
-     * the inner TFLite parses as version 3, 770 subgraphs, signatures
-     * decode / prefill_32 / prefill_128 / prefill_512 / prefill_1024.
+     * SHA-256 of that same bundle. Length alone can't vouch for a file: a resumed range written at
+     * the wrong offset, or two downloads appending into one `.part`, ends at exactly
+     * [EXPECTED_MODEL_BYTES] with scrambled contents. With the digest, a load failure can say
+     * whether the file is at fault instead of guessing. Checked against the published asset, whose
+     * inner TFLite parses as version 3, 770 subgraphs, signatures decode / prefill_32 /
+     * prefill_128 / prefill_512 / prefill_1024.
      *
      * Blank disables content verification (see [ModelIntegrity.Verdict.UNVERIFIABLE]).
      */
@@ -70,7 +60,9 @@ object AiConstants {
      */
     const val PROMPT_CHAR_BUDGET = 2800
 
-    /** Absolute path where the model is expected/stored on this device. */
-    fun modelFile(context: Context): File =
-        File(File(context.filesDir, MODEL_SUBDIR), MODEL_FILE_NAME)
+    /** The model files on this device; see [ModelStore] for why their names matter. */
+    fun modelStore(context: Context): ModelStore = ModelStore(File(context.filesDir, MODEL_SUBDIR))
+
+    /** The installed model, or where a new one would go when there isn't one yet. */
+    fun modelFile(context: Context): File = modelStore(context).let { it.installed() ?: it.bundle }
 }

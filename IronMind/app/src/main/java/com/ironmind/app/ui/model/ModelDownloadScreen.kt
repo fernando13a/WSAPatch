@@ -147,8 +147,8 @@ fun ModelDownloadScreen(
                     }
 
                     // Hashing 554 MB takes seconds. Saying so beats a bar stuck at 100%, which is
-                    // what invites a second tap on Download — two writers into one .part is how a
-                    // right-length, wrong-content model got installed in the first place.
+                    // what invites a second tap on Download, and two writers appending into one
+                    // .part would produce a right-length file with scrambled contents.
                     ModelDownloadState.Verifying -> Column {
                         Text(stringResource(R.string.model_verifying), color = Cyan)
                         Spacer(Modifier.height(8.dp))

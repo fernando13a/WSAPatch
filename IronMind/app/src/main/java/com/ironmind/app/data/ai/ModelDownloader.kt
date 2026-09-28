@@ -34,20 +34,14 @@ class ModelDownloader @Inject constructor(
     fun modelSizeBytes(): Long = AiConstants.modelFile(context).let { if (it.exists()) it.length() else 0L }
 
     /** Deletes the model (and any partial download) to reclaim storage. Returns true if a file went. */
-    fun deleteModel(): Boolean {
-        val dest = AiConstants.modelFile(context)
-        val part = java.io.File(dest.parentFile, dest.name + ".part")
-        val partGone = part.delete()
-        val destGone = dest.delete()
-        return partGone || destGone
-    }
+    fun deleteModel(): Boolean = AiConstants.modelStore(context).deleteAll()
 
     fun download(url: String): Flow<ModelDownloadState> = flow {
         emit(ModelDownloadState.Downloading(null))
 
-        val dest = AiConstants.modelFile(context)
-        dest.parentFile?.mkdirs()
-        val part = java.io.File(dest.parentFile, dest.name + ".part")
+        val store = AiConstants.modelStore(context)
+        val part = store.part
+        part.parentFile?.mkdirs()
 
         // Resume a previous partial download by asking the server for the remaining byte range.
         val alreadyHave = if (part.exists()) part.length() else 0L
@@ -139,10 +133,9 @@ class ModelDownloader @Inject constructor(
 
         verifyContentOrDelete(part)
 
-        if (!part.renameTo(dest)) {
-            part.copyTo(dest, overwrite = true)
-            part.delete()
-        }
+        // Named by content, not by URL: a .task must end in .task or MediaPipe reads it as a
+        // bare flatbuffer and fails with "Error building tflite model".
+        store.install(part)
         emit(ModelDownloadState.Ready)
     }.catch { throwable ->
         emit(ModelDownloadState.Error(throwable.message ?: "Error de descarga"))
@@ -199,9 +192,9 @@ class ModelDownloader @Inject constructor(
     fun importFromFile(uri: Uri): Flow<ModelDownloadState> = flow {
         emit(ModelDownloadState.Downloading(null))
 
-        val dest = AiConstants.modelFile(context)
-        dest.parentFile?.mkdirs()
-        val part = java.io.File(dest.parentFile, dest.name + ".part")
+        val store = AiConstants.modelStore(context)
+        val part = store.part
+        part.parentFile?.mkdirs()
 
         context.contentResolver.openInputStream(uri)?.use { input ->
             part.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
@@ -217,10 +210,9 @@ class ModelDownloader @Inject constructor(
 
         verifyContentOrDelete(part)
 
-        if (!part.renameTo(dest)) {
-            part.copyTo(dest, overwrite = true)
-            part.delete()
-        }
+        // Named by content, not by URL: a .task must end in .task or MediaPipe reads it as a
+        // bare flatbuffer and fails with "Error building tflite model".
+        store.install(part)
         emit(ModelDownloadState.Ready)
     }.catch { throwable ->
         emit(ModelDownloadState.Error(throwable.message ?: "Error al importar"))

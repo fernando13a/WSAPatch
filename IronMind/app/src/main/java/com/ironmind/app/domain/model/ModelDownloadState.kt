@@ -14,8 +14,8 @@ sealed interface ModelDownloadState {
     /**
      * Bytes are all here; the checksum is being computed. Its own state because hashing half a
      * gigabyte takes seconds, and a progress bar frozen at 100% with no explanation is what makes
-     * someone tap Download a second time — which is how two writers ended up interleaving into
-     * one `.part` and producing a right-length, wrong-content model in the first place.
+     * someone tap Download a second time — and two writers appending into one `.part` would
+     * produce a file of the right length with scrambled contents.
      */
     data object Verifying : ModelDownloadState
 

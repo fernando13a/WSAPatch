@@ -50,7 +50,7 @@ class ModelIntegrityTest {
     }
 
     /**
-     * The case that cost several debugging rounds: the length matches exactly, so every size check
+     * The case size checks can never catch: the length matches exactly, so every size check
      * passes, and only the content says the file is ruined.
      */
     @Test

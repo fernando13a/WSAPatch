@@ -182,7 +182,7 @@ fun modelLoadFailureMessage(
             "El modelo está incompleto: el archivo mide $megabytes MB y debería medir " +
                 "$expectedMegabytes MB. $redownload"
 
-        // The case that cost several rounds of debugging: right length, wrong bytes.
+        // Right length, wrong bytes: every size check passes, and only the hash can tell.
         ModelIntegrity.Verdict.CORRUPT ->
             "El archivo del modelo mide lo correcto ($megabytes MB) pero su contenido no coincide " +
                 "con el original, así que se dañó al descargarse. $redownload"
