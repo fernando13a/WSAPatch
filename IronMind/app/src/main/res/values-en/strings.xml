@@ -218,6 +218,7 @@
     <string name="model_import_file">Import model from file</string>
     <string name="model_resume_hint">If the download is interrupted, retrying resumes where it left off.</string>
     <string name="model_size_on_disk">Using %1$d MB on the device.</string>
+    <string name="model_build_stamp">Installed build: %1$s</string>
     <string name="model_delete">Delete model</string>
     <string name="model_delete_confirm_title">Delete the model?</string>
     <string name="model_delete_confirm_body">You\'ll free up space, but the AI coach will stop working until you download or import it again.</string>

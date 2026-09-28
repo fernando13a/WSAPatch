@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.BuildConfig
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.ModelDownloadState
 import com.ironmind.app.ui.components.AccentButton
@@ -85,6 +86,15 @@ fun ModelDownloadScreen(
                 SectionTitle(stringResource(R.string.model_ondevice_title), accent = Cyan)
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.model_desc), color = TextMuted)
+                // Which build is on this phone. Every APK used to report versionName "1.0.0"
+                // under the same app-debug.apk file name, so a stale download was impossible to
+                // tell from a fresh one and a shipped fix looked like it had not worked.
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.model_build_stamp, BuildConfig.VERSION_NAME),
+                    color = TextMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
 
             GlassCard {

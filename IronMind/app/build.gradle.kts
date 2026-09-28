@@ -18,6 +18,25 @@ val keystoreProps = Properties().apply {
     if (keystorePropsFile.exists()) FileInputStream(keystorePropsFile).use { load(it) }
 }
 
+/**
+ * Short commit this APK was built from, or "unknown" outside a git checkout.
+ *
+ * Every build so far shipped as `app-debug.apk` with versionName "1.0.0", so a phone holding a
+ * stale download looked exactly like an up-to-date one — a fix rode two rounds of "it still
+ * fails" before it turned out the APK on the device predated it. Stamping the commit into the
+ * version makes that checkable from the phone, and the failure loud instead of silent.
+ *
+ * Deliberately non-fatal: a source zip with no `.git`, or a runner without git, must still build.
+ */
+val gitSha: String = runCatching {
+    val process = ProcessBuilder("git", "rev-parse", "--short=7", "HEAD")
+        .directory(rootProject.projectDir)
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+    output.takeIf { process.waitFor() == 0 && it.isNotEmpty() }
+}.getOrNull() ?: "unknown"
+
 android {
     namespace = "com.ironmind.app"
     compileSdk = 35
@@ -27,7 +46,10 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 100  // Semantic: major.minor.patch as 1.0.0 = 100
-        versionName = "1.0.0"
+        // The commit rides in versionName so the build on a device can be identified from
+        // Settings → Apps, from `adb shell dumpsys package`, and from the AI model screen.
+        versionName = "1.0.0+$gitSha"
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }

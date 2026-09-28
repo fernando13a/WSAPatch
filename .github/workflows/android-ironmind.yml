@@ -71,6 +71,14 @@ jobs:
       # Publish the debug APK as a Release asset so it can be downloaded and installed directly
       # from a phone (a stable link, no GitHub login or zip needed). The debug APK is debug-signed,
       # so it installs on any device; the release APK stays unsigned and is not published here.
+      # Also publish the APK under a name carrying the commit. The release asset `app-debug.apk`
+      # has a fixed URL, so a phone that downloaded it before already has that file name in
+      # Downloads and the browser serves the cached copy — which made a shipped fix look like it
+      # had not worked at all. A commit-stamped name cannot collide with a stale download.
+      - name: Copy the APK to a commit-stamped name
+        if: github.event_name == 'push'
+        run: cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/ironmind-${GITHUB_SHA::7}.apk"
+
       - name: Publish debug APK to a Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
@@ -80,12 +88,19 @@ jobs:
           prerelease: true
           files: IronMind/app/build/outputs/apk/debug/*.apk
           body: |
-            Debug build of IronMind for on-device testing (latest from the
-            `claude/gym-tracking-app-offline-2qri5t` branch).
+            Debug build of IronMind for on-device testing, from
+            `claude/gym-tracking-app-offline-2qri5t` @ ${{ github.sha }}.
 
-            Install: open the `.apk` on your Android phone (8.0+), allow "install unknown apps"
-            for your browser/files app, then tap Install. For the AI coach, use
-            *IA on-device → Importar modelo desde archivo* to select a MediaPipe `.task` model.
+            **Download `ironmind-*.apk`** (the one with the commit in its name) rather than
+            `app-debug.apk`: that second name never changes, so a browser that downloaded it
+            before will hand you the old file from its cache.
+
+            Install: open the `.apk` on an Android phone (8.0+), allow "install unknown apps"
+            for your browser/files app, then tap Install. Play Protect warns about any sideloaded
+            app from an unknown developer — choose "Install anyway".
+
+            To confirm which build ended up on the phone, open *Modelo de IA*: the bottom of the
+            first card shows the installed build, which matches the commit above.
 
   # Run the instrumented tests (Room DAO + backup restore) on a real emulator. Kept in a
   # separate job because it needs KVM + a booted emulator, which the unit-test/build job does not.
