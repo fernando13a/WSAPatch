@@ -181,6 +181,7 @@
     <string name="routine_generator_generating">Generando rutina…</string>
     <string name="routine_generator_regenerate">Regenerar</string>
     <string name="routine_generator_proposed_title">Rutina propuesta</string>
+    <string name="routine_generator_rules_title">Rutina base (sin IA)</string>
     <string name="routine_generator_name_label">Nombre de la rutina</string>
     <string name="routine_generator_save">Guardar rutina</string>
     <string name="routine_generator_sets_label">Series</string>

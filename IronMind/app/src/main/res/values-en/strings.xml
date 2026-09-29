@@ -179,6 +179,7 @@
     <string name="routine_generator_generating">Generating routine…</string>
     <string name="routine_generator_regenerate">Regenerate</string>
     <string name="routine_generator_proposed_title">Proposed routine</string>
+    <string name="routine_generator_rules_title">Base routine (no AI)</string>
     <string name="routine_generator_name_label">Routine name</string>
     <string name="routine_generator_save">Save routine</string>
     <string name="routine_generator_sets_label">Sets</string>

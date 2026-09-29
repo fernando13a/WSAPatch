@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.RoutineDraftExercise
+import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftState
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
@@ -138,7 +139,21 @@ fun RoutineGeneratorScreen(
                 is RoutineDraftState.Success -> {
                     item {
                         GlassCard {
-                            SectionTitle(stringResource(R.string.routine_generator_proposed_title), accent = Cyan)
+                            val fromRules = state.draft.source == RoutineDraft.Source.RULES
+                            SectionTitle(
+                                stringResource(
+                                    if (fromRules) R.string.routine_generator_rules_title
+                                    else R.string.routine_generator_proposed_title,
+                                ),
+                                accent = if (fromRules) Gold else Cyan,
+                            )
+                            // Why the model's choice wasn't used. Shown rather than hidden: "no
+                            // model downloaded" and "the model failed to start" need different
+                            // actions, and a silent fallback would look like the AI chose this.
+                            state.draft.notice?.let { notice ->
+                                Spacer(Modifier.height(8.dp))
+                                Text(notice, color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                            }
                             Spacer(Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = ui.routineName,

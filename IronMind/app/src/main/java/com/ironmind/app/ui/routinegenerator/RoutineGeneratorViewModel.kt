@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.Routine
+import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftExercise
 import com.ironmind.app.domain.model.RoutineDraftState
 import com.ironmind.app.domain.model.RoutineSplit
@@ -111,7 +112,12 @@ class RoutineGeneratorViewModel @Inject constructor(
         viewModelScope.launch {
             // Fallback name only matters if the user never typed one — the screen encourages
             // naming the routine, this just guarantees upsertRoutine never gets a blank name.
-            val name = state.routineName.trim().ifBlank { "${state.split.name} (IA)" }
+            // "(IA)" only when the model actually chose: a rule-built fallback isn't the AI's.
+            val fromRules = (_draftState.value as? RoutineDraftState.Success)
+                ?.draft?.source == RoutineDraft.Source.RULES
+            val name = state.routineName.trim().ifBlank {
+                if (fromRules) state.split.name else "${state.split.name} (IA)"
+            }
             val routineId = repository.upsertRoutine(Routine(name = name, split = state.split))
             rows.forEachIndexed { index, row ->
                 repository.addExerciseToRoutine(

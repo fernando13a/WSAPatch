@@ -8,53 +8,76 @@ import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
 import com.ironmind.app.domain.util.RoutineCandidateSelector
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RoutineGeneratorPromptBuilderTest {
 
     private val candidates = listOf(
-        Exercise(id = 1, name = "Barbell Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL),
-        Exercise(id = 2, name = "Overhead Press", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.BARBELL),
+        Exercise(id = 41, name = "Barbell Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL),
+        Exercise(id = 77, name = "Overhead Press", nameEs = "Press militar", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.BARBELL),
     )
 
-    @Test
-    fun build_listsCandidatesByIdAndName() {
-        val prompt = RoutineGeneratorPromptBuilder.build(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY, candidates)
+    private fun prompt(goal: TrainingGoal = TrainingGoal.HYPERTROPHY, list: List<Exercise> = candidates) =
+        RoutineGeneratorPromptBuilder.build(RoutineSplit.PUSH, goal, list)
 
-        assertTrue(prompt.contains("1|Barbell Bench Press"))
-        assertTrue(prompt.contains("2|Overhead Press"))
+    /** Positions 1..N with the muscle group, not catalog ids: short and never mistaken for reps. */
+    @Test
+    fun listsCandidatesByPositionWithTheirMuscleGroup() {
+        val text = prompt()
+
+        assertTrue(text, text.contains("1. Barbell Bench Press — pecho"))
+        assertTrue(text, text.contains("2. Press militar — hombro"))
+        assertFalse("catalog ids must not leak into the list", text.contains("41"))
     }
 
     @Test
-    fun build_includesTheRequiredOutputFormat() {
-        val prompt = RoutineGeneratorPromptBuilder.build(RoutineSplit.PUSH, TrainingGoal.STRENGTH, candidates)
+    fun asksOnlyForTheChosenNumbers() {
+        val text = prompt()
 
-        assertTrue(prompt.contains("id|series|repeticiones|descanso_segundos"))
-        assertTrue(prompt.contains("EXCLUSIVAMENTE"))
+        assertTrue(text.contains("SOLO con los números"))
+        assertTrue(text.contains("separados por comas"))
+    }
+
+    /** Sets, reps and rest are the assembler's job now; asking for them is what broke parsing. */
+    @Test
+    fun doesNotAskTheModelForSetsRepsOrRest() {
+        val text = prompt()
+
+        assertFalse(text.contains("repeticiones"))
+        assertFalse(text.contains("descanso"))
+        assertFalse(text.contains("|"))
+    }
+
+    /** A small model often copies the example; every number in it must be a real position. */
+    @Test
+    fun theExampleOnlyUsesPositionsThatExist() {
+        val example = prompt().lineSequence().first { it.startsWith("Ejemplo de formato:") }
+        val numbers = Regex("""\d+""").findAll(example).map { it.value.toInt() }.toList()
+
+        assertTrue(example, numbers.isNotEmpty())
+        assertTrue(example, numbers.all { it in 1..candidates.size })
     }
 
     @Test
-    fun build_reflectsGoalInTheGuidance() {
-        val strength = RoutineGeneratorPromptBuilder.build(RoutineSplit.PUSH, TrainingGoal.STRENGTH, candidates)
-        val endurance = RoutineGeneratorPromptBuilder.build(RoutineSplit.PUSH, TrainingGoal.ENDURANCE, candidates)
-
-        assertTrue(strength.contains("fuerza"))
-        assertTrue(endurance.contains("resistencia"))
+    fun reflectsTheGoal() {
+        assertTrue(prompt(TrainingGoal.STRENGTH).contains("fuerza"))
+        assertTrue(prompt(TrainingGoal.ENDURANCE).contains("resistencia"))
     }
 
     @Test
-    fun build_worstCaseCandidateCountAndNamesStaysWithinPromptBudget() {
+    fun worstCaseCandidateCountAndNamesStaysWithinPromptBudget() {
         val longName = "Standing Barbell Overhead Military Press Variation"
         val worstCaseCandidates = (1..RoutineCandidateSelector.MAX_CANDIDATES).map {
-            Exercise(id = it.toLong(), name = "$longName $it", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.BARBELL)
+            Exercise(id = it.toLong(), name = "$longName $it", muscleGroup = MuscleGroup.FULL_BODY, equipment = Equipment.BARBELL)
         }
 
-        val prompt = RoutineGeneratorPromptBuilder.build(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY, worstCaseCandidates)
+        val text = prompt(list = worstCaseCandidates)
 
         assertTrue(
-            "prompt was ${prompt.length} chars, budget is ${AiConstants.PROMPT_CHAR_BUDGET}",
-            prompt.length <= AiConstants.PROMPT_CHAR_BUDGET,
+            "prompt was ${text.length} chars, budget is ${AiConstants.PROMPT_CHAR_BUDGET}",
+            text.length <= AiConstants.PROMPT_CHAR_BUDGET,
         )
     }
 }
