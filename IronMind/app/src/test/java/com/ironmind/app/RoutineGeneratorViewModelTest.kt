@@ -2,6 +2,7 @@ package com.ironmind.app
 
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftState
@@ -33,7 +34,7 @@ class RoutineGeneratorViewModelTest {
     private val pickAll = FakeLlmInferenceService(chunks = listOf("1, 2, 3"))
 
     private fun viewModel(repo: FakeWorkoutRepository, llm: FakeLlmInferenceService) =
-        RoutineGeneratorViewModel(repo, GenerateRoutineUseCase(repo, llm))
+        RoutineGeneratorViewModel(repo, GenerateRoutineUseCase(repo, llm), FakeAppPreferences())
 
     private fun repo() = FakeWorkoutRepository().apply { exercisesFlow.value = catalog }
 
@@ -135,6 +136,63 @@ class RoutineGeneratorViewModelTest {
         val rulesRepo = repo()
         viewModel(rulesRepo, FakeLlmInferenceService(chunks = listOf("no sé"))).apply { generate(); save {} }
         assertEquals("PUSH", rulesRepo.upsertedRoutines.single().name)
+    }
+
+    @Test
+    fun defaultsToAnHourAndNoLimitations() = runTest(mainRule.dispatcher) {
+        val vm = viewModel(repo(), pickAll)
+
+        assertEquals(60, vm.ui.value.timeBudgetMinutes)
+        assertTrue(vm.ui.value.avoid.isEmpty())
+    }
+
+    /** The form's limitation chips must actually reach the shortlist, not just the UI state. */
+    @Test
+    fun aToggledLimitationIsAppliedToTheGeneratedRoutine() = runTest(mainRule.dispatcher) {
+        val squat = Exercise(id = 10, name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL)
+        val curl = Exercise(id = 11, name = "Lying Leg Curl", muscleGroup = MuscleGroup.HAMSTRINGS, equipment = Equipment.MACHINE)
+        val repo = FakeWorkoutRepository().apply { exercisesFlow.value = listOf(squat, curl) }
+        val vm = viewModel(repo, FakeLlmInferenceService(chunks = listOf("1, 2")))
+        vm.setSplit(RoutineSplit.LEGS)
+
+        vm.toggleLimitation(Limitation.KNEE)
+        vm.generate()
+
+        assertEquals(listOf(11L), vm.draftRows.value.map { it.exerciseId })
+
+        vm.toggleLimitation(Limitation.KNEE) // off again
+        vm.generate()
+
+        assertTrue(10L in vm.draftRows.value.map { it.exerciseId })
+    }
+
+    @Test
+    fun theChosenTimeBudgetIsKept() = runTest(mainRule.dispatcher) {
+        val vm = viewModel(repo(), pickAll)
+
+        vm.setTimeBudget(30)
+
+        assertEquals(30, vm.ui.value.timeBudgetMinutes)
+    }
+
+    @Test
+    fun editingARowKeepsItsLastPerformance() = runTest(mainRule.dispatcher) {
+        val repo = repo().apply {
+            recentActivity = listOf(
+                com.ironmind.app.domain.model.SetLog(
+                    sessionId = 1, exerciseId = 1, setNumber = 1, weightKg = 80.0, reps = 5,
+                    performedAt = System.currentTimeMillis() - 5L * 24 * 3_600_000,
+                ),
+            )
+        }
+        val vm = viewModel(repo, pickAll)
+        vm.generate()
+
+        vm.updateRow(exerciseId = 1L, sets = 5, reps = 3, restSeconds = 180)
+
+        val row = vm.draftRows.value.first { it.exerciseId == 1L }
+        assertEquals(80.0, row.lastWeightKg!!, 0.0)
+        assertEquals(5, row.lastReps)
     }
 
     @Test

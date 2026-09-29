@@ -2,14 +2,17 @@ package com.ironmind.app.ui.routinegenerator
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ironmind.app.data.preferences.AppPreferences
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.Routine
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftExercise
 import com.ironmind.app.domain.model.RoutineDraftState
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
+import com.ironmind.app.domain.model.WeightUnit
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.usecase.GenerateRoutineUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,8 +31,17 @@ data class RoutineGeneratorUiState(
     val availableEquipment: Set<Equipment> = Equipment.entries.toSet(),
     val routineName: String = "",
     val exercisesById: Map<Long, Exercise> = emptyMap(),
+    /** Whole session, warm-up included — the assembler sizes the routine to fit it. */
+    val timeBudgetMinutes: Int = DEFAULT_TIME_BUDGET_MINUTES,
+    /** Joints to spare; exercises loading them are left out of the shortlist entirely. */
+    val avoid: Set<Limitation> = emptySet(),
 ) {
     val canGenerate: Boolean get() = availableEquipment.isNotEmpty()
+
+    companion object {
+        val TIME_BUDGET_OPTIONS = listOf(30, 45, 60, 90)
+        const val DEFAULT_TIME_BUDGET_MINUTES = 60
+    }
 }
 
 /**
@@ -43,7 +55,11 @@ data class RoutineGeneratorUiState(
 class RoutineGeneratorViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val generateRoutine: GenerateRoutineUseCase,
+    appPreferences: AppPreferences,
 ) : ViewModel() {
+
+    /** For the "last time / suggested" line on each draft row; weights are stored in kg. */
+    val weightUnit: StateFlow<WeightUnit> = appPreferences.weightUnitFlow
 
     private val _ui = MutableStateFlow(RoutineGeneratorUiState())
     val ui: StateFlow<RoutineGeneratorUiState> = _ui.asStateFlow()
@@ -73,13 +89,25 @@ class RoutineGeneratorViewModel @Inject constructor(
         state.copy(availableEquipment = if (equipment in current) current - equipment else current + equipment)
     }
 
+    fun setTimeBudget(minutes: Int) = _ui.update { it.copy(timeBudgetMinutes = minutes) }
+
+    fun toggleLimitation(limitation: Limitation) = _ui.update { state ->
+        state.copy(avoid = if (limitation in state.avoid) state.avoid - limitation else state.avoid + limitation)
+    }
+
     fun generate() {
         val state = _ui.value
         if (!state.canGenerate) return
         generateJob?.cancel()
         _draftRows.value = emptyList()
         generateJob = viewModelScope.launch {
-            generateRoutine(state.split, state.goal, state.availableEquipment).collect { result ->
+            generateRoutine(
+                split = state.split,
+                goal = state.goal,
+                availableEquipment = state.availableEquipment,
+                timeBudgetMinutes = state.timeBudgetMinutes,
+                avoid = state.avoid,
+            ).collect { result ->
                 _draftState.value = result
                 if (result is RoutineDraftState.Success) _draftRows.value = result.draft.exercises
             }

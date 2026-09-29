@@ -2,6 +2,7 @@ package com.ironmind.app.domain.util
 
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.RoutineSplit
 
 /**
@@ -19,26 +20,35 @@ object RoutineCandidateSelector {
 
     /**
      * @param availableEquipment restricts candidates to this equipment; `null` means "any equipment".
+     * @param history ranks exercises the athlete has logged ahead of ones they never do.
+     * @param avoid drops every exercise that loads one of these joints.
      */
     fun select(
         split: RoutineSplit,
         catalog: List<Exercise>,
         availableEquipment: Set<Equipment>? = null,
+        history: TrainingHistory = TrainingHistory.EMPTY,
+        avoid: Set<Limitation> = emptySet(),
     ): List<Exercise> {
         val muscleGroups = split.muscleGroups()
         val matching = catalog.filter { exercise ->
             exercise.muscleGroup in muscleGroups &&
-                (availableEquipment == null || exercise.equipment in availableEquipment)
+                (availableEquipment == null || exercise.equipment in availableEquipment) &&
+                avoid.none { exercise.stresses(it) }
         }
 
-        // Round-robin across muscle groups (curated/instructions-bearing exercises first within
-        // each group) so the shortlist has real variety instead of being dominated by whichever
-        // muscle group happens to have the most catalog entries.
+        // Round-robin across muscle groups so the shortlist has real variety instead of being
+        // dominated by whichever muscle group happens to have the most catalog entries. Within a
+        // group: what the athlete actually does first — with ~870 entries, the shortlist would
+        // otherwise hand the model 24 exercises they've never touched — then curated ones.
         val queues = muscleGroups
             .mapNotNull { group ->
                 val forGroup = matching
                     .filter { it.muscleGroup == group }
-                    .sortedByDescending { !it.instructions.isNullOrBlank() }
+                    .sortedWith(
+                        compareByDescending<Exercise> { history.familiarity(it.id) }
+                            .thenByDescending { !it.instructions.isNullOrBlank() },
+                    )
                 forGroup.takeIf { it.isNotEmpty() }?.let { ArrayDeque(it) }
             }
 

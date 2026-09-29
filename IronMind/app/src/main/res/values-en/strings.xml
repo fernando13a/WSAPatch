@@ -180,6 +180,16 @@
     <string name="routine_generator_regenerate">Regenerate</string>
     <string name="routine_generator_proposed_title">Proposed routine</string>
     <string name="routine_generator_rules_title">Base routine (no AI)</string>
+    <string name="routine_generator_time_label">Time available</string>
+    <string name="routine_generator_minutes">%1$d min</string>
+    <string name="routine_generator_avoid_label">Go easy on</string>
+    <string name="limitation_knee">Knee</string>
+    <string name="limitation_shoulder">Shoulder</string>
+    <string name="limitation_lower_back">Lower back</string>
+    <string name="routine_generator_estimated">Estimated duration: ~%1$d min</string>
+    <string name="routine_generator_last_time">Last time: %1$s × %2$d</string>
+    <string name="routine_generator_last_time_bodyweight">Last time: %1$d reps</string>
+    <string name="routine_generator_suggested">suggested: %1$s</string>
     <string name="routine_generator_name_label">Routine name</string>
     <string name="routine_generator_save">Save routine</string>
     <string name="routine_generator_sets_label">Sets</string>

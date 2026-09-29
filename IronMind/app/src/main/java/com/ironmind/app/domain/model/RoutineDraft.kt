@@ -15,6 +15,11 @@ data class RoutineDraft(
      * failed to start, took too long, or answered with nothing usable. Null for an AI draft.
      */
     val notice: String? = null,
+    /**
+     * What was tailored to the athlete and why — "chest trained 20 h ago, one exercise", "knee
+     * exercises left out". Shown on the draft so a missing muscle or a short list isn't a mystery.
+     */
+    val adjustments: List<String> = emptyList(),
 ) {
     enum class Source {
         /** The model picked and ordered the exercises; Kotlin balanced and prescribed them. */
@@ -30,4 +35,11 @@ data class RoutineDraftExercise(
     val sets: Int,
     val reps: Int,
     val restSeconds: Int,
+    /**
+     * The top set of the last session this exercise was logged in, if any — shown on the draft
+     * with a suggested weight for [reps] (see [com.ironmind.app.domain.util.StartingWeight]).
+     * Display only: routines don't store a target weight, so saving leaves these behind.
+     */
+    val lastWeightKg: Double? = null,
+    val lastReps: Int? = null,
 )

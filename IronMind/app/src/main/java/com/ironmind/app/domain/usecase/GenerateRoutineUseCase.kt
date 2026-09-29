@@ -5,7 +5,9 @@ import com.ironmind.app.domain.ai.LlmModelNotFoundException
 import com.ironmind.app.domain.ai.RoutineGeneratorPromptBuilder
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.RoutineDraft
+import com.ironmind.app.domain.model.RoutineDraftExercise
 import com.ironmind.app.domain.model.RoutineDraftState
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
@@ -13,6 +15,9 @@ import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.util.RoutineAssembler
 import com.ironmind.app.domain.util.RoutineCandidateSelector
 import com.ironmind.app.domain.util.RoutineChoiceParser
+import com.ironmind.app.domain.util.TrainingHistory
+import com.ironmind.app.domain.util.joinAsSpanishList
+import com.ironmind.app.domain.util.spanishName
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -31,60 +36,120 @@ import javax.inject.Inject
  * Whatever the model does, the athlete gets a routine. If it isn't downloaded, fails to start,
  * hangs, or answers with nothing usable, the same assembler builds the day from rules and the
  * draft says why ([RoutineDraft.Source.RULES] with a [RoutineDraft.notice]). The only error left
- * is the one no model could fix: nothing in the catalog matches the split and equipment.
+ * is the one no model could fix: nothing in the catalog matches the split, equipment and joints
+ * to spare.
+ *
+ * Personal to the athlete through their own log ([TrainingHistory]): muscles trained in the last
+ * 48 h get a single exercise, the exercises they actually do are shortlisted first, each row shows
+ * the last session's top set, and the day is sized to [invoke]'s time budget. What was tailored
+ * is listed on the draft ([RoutineDraft.adjustments]).
  */
 class GenerateRoutineUseCase @Inject constructor(
     private val repository: WorkoutRepository,
     private val llmInferenceService: LlmInferenceService,
 ) {
 
+    /**
+     * @param timeBudgetMinutes the whole session, warm-up included; null sizes by count instead.
+     * @param avoid joints to spare — exercises loading them never reach the shortlist.
+     * @param now injectable so tests can place logged sets relative to "today".
+     */
     operator fun invoke(
         split: RoutineSplit,
         goal: TrainingGoal,
         availableEquipment: Set<Equipment>? = null,
+        timeBudgetMinutes: Int? = null,
+        avoid: Set<Limitation> = emptySet(),
+        now: Long = System.currentTimeMillis(),
     ): Flow<RoutineDraftState> = flow {
         emit(RoutineDraftState.Loading)
 
         val catalog = repository.getAllExercises()
-        val candidates = RoutineCandidateSelector.select(split, catalog, availableEquipment)
+        val history = TrainingHistory.from(
+            activity = repository.getRecentActivity(now - HISTORY_WINDOW_MS),
+            exercisesById = catalog.associateBy { it.id },
+            now = now,
+        )
+        val candidates = RoutineCandidateSelector.select(split, catalog, availableEquipment, history, avoid)
         if (candidates.isEmpty()) {
+            val limits = if (avoid.isEmpty()) "" else " y las molestias marcadas"
             emit(
                 RoutineDraftState.Error(
-                    "No hay ejercicios disponibles para este split con el equipo seleccionado.",
+                    "No hay ejercicios disponibles para este split con el equipo seleccionado$limits.",
                 ),
             )
             return@flow
         }
 
-        val draft = when (val choice = askModel(split, goal, candidates)) {
-            is ModelChoice.Picked -> RoutineDraft(
-                split = split,
-                exercises = RoutineAssembler.assemble(split, goal, candidates, choice.exercises),
-                source = RoutineDraft.Source.AI,
-            )
-            is ModelChoice.Unusable -> RoutineDraft(
-                split = split,
-                exercises = RoutineAssembler.assemble(split, goal, candidates),
-                source = RoutineDraft.Source.RULES,
-                notice = choice.reason,
-            )
+        val choice = askModel(split, goal, candidates, history, timeBudgetMinutes)
+        val rows = RoutineAssembler.assemble(
+            split = split,
+            goal = goal,
+            candidates = candidates,
+            chosen = (choice as? ModelChoice.Picked)?.exercises.orEmpty(),
+            history = history,
+            timeBudgetMinutes = timeBudgetMinutes,
+        ).map { row ->
+            history.lastTopSet[row.exerciseId]?.let { row.copy(lastWeightKg = it.weightKg, lastReps = it.reps) } ?: row
         }
-        emit(RoutineDraftState.Success(draft))
+
+        emit(
+            RoutineDraftState.Success(
+                RoutineDraft(
+                    split = split,
+                    exercises = rows,
+                    source = if (choice is ModelChoice.Picked) RoutineDraft.Source.AI else RoutineDraft.Source.RULES,
+                    notice = (choice as? ModelChoice.Unusable)?.reason,
+                    adjustments = adjustments(candidates, rows, history, avoid),
+                ),
+            ),
+        )
     }.catch { throwable ->
         // Only the repository can get here now; every model failure is already a rule-based draft.
         emit(RoutineDraftState.Error(throwable.message ?: "Ocurrió un error al generar la rutina."))
+    }
+
+    /**
+     * One line per thing that was tailored, in the order an athlete would ask about them: why a
+     * muscle has fewer exercises, why an obvious movement is missing, what was favoured.
+     */
+    private fun adjustments(
+        candidates: List<Exercise>,
+        rows: List<RoutineDraftExercise>,
+        history: TrainingHistory,
+        avoid: Set<Limitation>,
+    ): List<String> = buildList {
+        val groupById = candidates.associate { it.id to it.muscleGroup }
+        rows.mapNotNull { groupById[it.exerciseId] }.distinct()
+            .mapNotNull { group -> history.hoursSinceTrained[group]?.let { group to it } }
+            .forEach { (group, hours) ->
+                add(
+                    "${group.spanishName().replaceFirstChar { it.uppercase() }}: lo entrenaste hace " +
+                        "${hours.coerceAtLeast(1)} h, así que lleva un solo ejercicio.",
+                )
+            }
+        if (avoid.isNotEmpty()) {
+            add("Dejé fuera los ejercicios que cargan ${avoid.map { it.spanishName() }.joinAsSpanishList()}.")
+        }
+        val familiar = rows.count { history.familiarity(it.exerciseId) > 0 }
+        if (familiar > 0) {
+            add(if (familiar == 1) "Incluye 1 ejercicio que ya haces." else "Incluye $familiar ejercicios que ya haces.")
+        }
     }
 
     private suspend fun askModel(
         split: RoutineSplit,
         goal: TrainingGoal,
         candidates: List<Exercise>,
+        history: TrainingHistory,
+        timeBudgetMinutes: Int?,
     ): ModelChoice {
         val response = StringBuilder()
+        val prompt = RoutineGeneratorPromptBuilder.build(split, goal, candidates, history, timeBudgetMinutes)
         val finished = try {
             withTimeoutOrNull(GENERATION_TIMEOUT_MS) {
                 llmInferenceService
-                    .generateResponseStream(RoutineGeneratorPromptBuilder.build(split, goal, candidates))
+                    .generateResponseStream(prompt)
                     .collect { response.append(it) }
                 true
             }
@@ -139,6 +204,12 @@ class GenerateRoutineUseCase @Inject constructor(
          * engine, which takes tens of seconds on a mid-range phone before a token comes out.
          */
         const val GENERATION_TIMEOUT_MS = 120_000L
+
+        /**
+         * One query covers recovery (48 h), familiarity and the last top set; 90 days reaches an
+         * exercise done once a month without pulling in a lifetime of sets.
+         */
+        const val HISTORY_WINDOW_MS = 90L * 24 * 60 * 60 * 1000
 
         /** How much of a reason or of the model's own words a notice shows. */
         const val REASON_CHARS = 300

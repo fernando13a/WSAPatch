@@ -48,11 +48,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.Equipment
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.RoutineDraftExercise
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftState
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
+import com.ironmind.app.domain.model.WeightUnit
+import com.ironmind.app.domain.util.RoutinePrescription
+import com.ironmind.app.domain.util.StartingWeight
 import com.ironmind.app.ui.components.AccentButton
 import com.ironmind.app.ui.components.Chip
 import com.ironmind.app.ui.components.GlassCard
@@ -63,6 +67,7 @@ import com.ironmind.app.ui.theme.Gold
 import com.ironmind.app.ui.theme.TextMuted
 import com.ironmind.app.ui.util.displayName
 import com.ironmind.app.ui.util.label
+import com.ironmind.app.ui.util.weightLabel
 
 private val ErrorRed = Color(0xFFFF6B6B)
 
@@ -76,6 +81,7 @@ fun RoutineGeneratorScreen(
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val draftState by viewModel.draftState.collectAsStateWithLifecycle()
     val draftRows by viewModel.draftRows.collectAsStateWithLifecycle()
+    val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = Black,
@@ -104,11 +110,15 @@ fun RoutineGeneratorScreen(
                     split = ui.split,
                     goal = ui.goal,
                     availableEquipment = ui.availableEquipment,
+                    timeBudgetMinutes = ui.timeBudgetMinutes,
+                    avoid = ui.avoid,
                     canGenerate = ui.canGenerate,
                     isGenerating = draftState == RoutineDraftState.Loading,
                     onSplitChange = viewModel::setSplit,
                     onGoalChange = viewModel::setGoal,
                     onToggleEquipment = viewModel::toggleEquipment,
+                    onTimeBudgetChange = viewModel::setTimeBudget,
+                    onToggleLimitation = viewModel::toggleLimitation,
                     onGenerate = viewModel::generate,
                 )
             }
@@ -154,6 +164,22 @@ fun RoutineGeneratorScreen(
                                 Spacer(Modifier.height(8.dp))
                                 Text(notice, color = TextMuted, style = MaterialTheme.typography.bodySmall)
                             }
+                            // What was tailored to this athlete, so a muscle with one exercise or
+                            // a missing squat reads as a decision rather than a bug.
+                            state.draft.adjustments.forEach { line ->
+                                Spacer(Modifier.height(6.dp))
+                                Text("• $line", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            // From the rows as edited, so it moves when a set or a rest changes.
+                            Text(
+                                stringResource(
+                                    R.string.routine_generator_estimated,
+                                    RoutinePrescription.estimatedSessionMinutes(draftRows),
+                                ),
+                                color = Cyan,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
                             Spacer(Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = ui.routineName,
@@ -169,6 +195,7 @@ fun RoutineGeneratorScreen(
                         DraftRowCard(
                             exerciseName = ui.exercisesById[row.exerciseId]?.displayName() ?: row.exerciseId.toString(),
                             row = row,
+                            weightUnit = weightUnit,
                             onUpdate = { sets, reps, rest -> viewModel.updateRow(row.exerciseId, sets, reps, rest) },
                             onRemove = { viewModel.removeRow(row.exerciseId) },
                         )
@@ -197,11 +224,15 @@ private fun FormCard(
     split: RoutineSplit,
     goal: TrainingGoal,
     availableEquipment: Set<Equipment>,
+    timeBudgetMinutes: Int,
+    avoid: Set<Limitation>,
     canGenerate: Boolean,
     isGenerating: Boolean,
     onSplitChange: (RoutineSplit) -> Unit,
     onGoalChange: (TrainingGoal) -> Unit,
     onToggleEquipment: (Equipment) -> Unit,
+    onTimeBudgetChange: (Int) -> Unit,
+    onToggleLimitation: (Limitation) -> Unit,
     onGenerate: () -> Unit,
 ) {
     GlassCard(
@@ -251,9 +282,31 @@ private fun FormCard(
         Text(stringResource(R.string.routine_generator_equipment_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         FlowChips(
-            equipment = Equipment.entries,
-            selected = availableEquipment,
+            items = Equipment.entries,
+            isSelected = { it in availableEquipment },
+            label = { it.label() },
             onToggle = onToggleEquipment,
+        )
+
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.routine_generator_time_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        FlowChips(
+            items = RoutineGeneratorUiState.TIME_BUDGET_OPTIONS,
+            isSelected = { it == timeBudgetMinutes },
+            label = { stringResource(R.string.routine_generator_minutes, it) },
+            onToggle = onTimeBudgetChange,
+            perRow = 4,
+        )
+
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.routine_generator_avoid_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        FlowChips(
+            items = Limitation.entries,
+            isSelected = { it in avoid },
+            label = { it.label() },
+            onToggle = onToggleLimitation,
         )
 
         Spacer(Modifier.height(16.dp))
@@ -270,17 +323,22 @@ private fun FormCard(
     }
 }
 
-/** Simple wrapping row of toggleable equipment chips (no Compose FlowRow dependency needed at this count). */
+/** Simple wrapping rows of toggleable chips (no Compose FlowRow dependency needed at these counts). */
 @Composable
-private fun FlowChips(equipment: List<Equipment>, selected: Set<Equipment>, onToggle: (Equipment) -> Unit) {
+private fun <T> FlowChips(
+    items: List<T>,
+    isSelected: (T) -> Boolean,
+    label: @Composable (T) -> String,
+    onToggle: (T) -> Unit,
+    perRow: Int = 3,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        equipment.chunked(3).forEach { rowItems ->
+        items.chunked(perRow).forEach { rowItems ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowItems.forEach { item ->
-                    val isSelected = item in selected
                     Chip(
-                        text = item.label(),
-                        accent = if (isSelected) Gold else TextMuted,
+                        text = label(item),
+                        accent = if (isSelected(item)) Gold else TextMuted,
                         modifier = Modifier.clickable { onToggle(item) },
                     )
                 }
@@ -290,9 +348,39 @@ private fun FlowChips(equipment: List<Equipment>, selected: Set<Equipment>, onTo
 }
 
 @Composable
+private fun Limitation.label(): String = stringResource(
+    when (this) {
+        Limitation.KNEE -> R.string.limitation_knee
+        Limitation.SHOULDER -> R.string.limitation_shoulder
+        Limitation.LOWER_BACK -> R.string.limitation_lower_back
+    },
+)
+
+/**
+ * "Last time: 60 kg × 8 · Suggested: 57 kg" — the suggestion follows the row's current rep target,
+ * so it updates as the athlete edits reps. Bodyweight work shows only the reps.
+ */
+@Composable
+private fun LastPerformance(row: RoutineDraftExercise, weightUnit: WeightUnit) {
+    val lastReps = row.lastReps ?: return
+    val lastKg = row.lastWeightKg ?: 0.0
+    val text = if (lastKg <= 0.0) {
+        stringResource(R.string.routine_generator_last_time_bodyweight, lastReps)
+    } else {
+        val last = stringResource(R.string.routine_generator_last_time, weightLabel(lastKg, weightUnit), lastReps)
+        StartingWeight.suggestKg(lastKg, lastReps, row.reps)
+            ?.let { "$last · " + stringResource(R.string.routine_generator_suggested, weightLabel(it, weightUnit)) }
+            ?: last
+    }
+    Spacer(Modifier.height(4.dp))
+    Text(text, color = Cyan, style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
 private fun DraftRowCard(
     exerciseName: String,
     row: RoutineDraftExercise,
+    weightUnit: WeightUnit,
     onUpdate: (sets: Int, reps: Int, restSeconds: Int) -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -318,6 +406,7 @@ private fun DraftRowCard(
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_delete), tint = TextMuted)
             }
         }
+        LastPerformance(row, weightUnit)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(

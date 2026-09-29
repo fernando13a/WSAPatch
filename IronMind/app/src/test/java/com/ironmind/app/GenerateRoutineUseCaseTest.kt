@@ -4,7 +4,9 @@ import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.ai.LlmModelNotFoundException
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.MuscleGroup
+import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftState
 import com.ironmind.app.domain.model.RoutineSplit
@@ -23,6 +25,11 @@ import org.junit.Test
 
 class GenerateRoutineUseCaseTest {
 
+    private companion object {
+        const val HOUR = 3_600_000L
+        const val NOW = 1_000_000L * HOUR
+    }
+
     private val bench = Exercise(id = 11, name = "Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL)
     private val ohp = Exercise(id = 22, name = "Overhead Press", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.BARBELL)
     private val lateral = Exercise(id = 33, name = "Lateral Raise", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.DUMBBELL)
@@ -32,8 +39,103 @@ class GenerateRoutineUseCaseTest {
         exercisesFlow.value = exercises
     }
 
-    private suspend fun generate(llm: LlmInferenceService, exercises: List<Exercise> = listOf(bench, ohp, lateral, pushdown)) =
-        GenerateRoutineUseCase(repository(exercises), llm)(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY).toList()
+    private suspend fun generate(
+        llm: LlmInferenceService,
+        exercises: List<Exercise> = listOf(bench, ohp, lateral, pushdown),
+        repo: FakeWorkoutRepository = repository(exercises),
+        split: RoutineSplit = RoutineSplit.PUSH,
+        timeBudgetMinutes: Int? = null,
+        avoid: Set<Limitation> = emptySet(),
+    ) = GenerateRoutineUseCase(repo, llm)(
+        split = split,
+        goal = TrainingGoal.HYPERTROPHY,
+        timeBudgetMinutes = timeBudgetMinutes,
+        avoid = avoid,
+        now = NOW,
+    ).toList()
+
+    private fun loggedSet(exercise: Exercise, hoursAgo: Long, weight: Double = 60.0, reps: Int = 8) = SetLog(
+        sessionId = hoursAgo, exerciseId = exercise.id, setNumber = 1, weightKg = weight, reps = reps,
+        performedAt = NOW - hoursAgo * HOUR,
+    )
+
+    private val unusable = FakeLlmInferenceService(chunks = listOf("no sé"))
+
+    @Test
+    fun eachRowCarriesTheLastTopSetForItsExercise() = runTest {
+        val repo = repository(listOf(bench, ohp, lateral, pushdown)).apply {
+            recentActivity = listOf(loggedSet(bench, hoursAgo = 100, weight = 80.0, reps = 5))
+        }
+
+        val draft = draftOf(generate(unusable, repo = repo))
+
+        val benchRow = draft.exercises.first { it.exerciseId == bench.id }
+        assertEquals(80.0, benchRow.lastWeightKg!!, 0.0)
+        assertEquals(5, benchRow.lastReps)
+        assertNull("never logged", draft.exercises.first { it.exerciseId == ohp.id }.lastWeightKg)
+    }
+
+    @Test
+    fun aRecentlyTrainedMuscleIsReducedAndExplained() = runTest {
+        val incline = Exercise(id = 55, name = "Incline Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL)
+        val repo = repository(listOf(bench, incline, ohp, lateral, pushdown)).apply {
+            recentActivity = listOf(loggedSet(bench, hoursAgo = 10))
+        }
+
+        val draft = draftOf(generate(unusable, repo = repo))
+
+        val chestRows = draft.exercises.count { it.exerciseId == bench.id || it.exerciseId == incline.id }
+        assertEquals(1, chestRows)
+        assertTrue(draft.adjustments.toString(), draft.adjustments.any { it.startsWith("Pecho: lo entrenaste hace 10 h") })
+    }
+
+    @Test
+    fun avoidedJointsAreLeftOutAndExplained() = runTest {
+        val squat = Exercise(id = 61, name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL)
+        val curl = Exercise(id = 62, name = "Lying Leg Curl", muscleGroup = MuscleGroup.HAMSTRINGS, equipment = Equipment.MACHINE)
+
+        val draft = draftOf(
+            generate(unusable, exercises = listOf(squat, curl), split = RoutineSplit.LEGS, avoid = setOf(Limitation.KNEE)),
+        )
+
+        assertEquals(listOf(62L), draft.exercises.map { it.exerciseId })
+        assertTrue(draft.adjustments.toString(), draft.adjustments.any { it.contains("la rodilla") })
+    }
+
+    /** Avoiding every option leaves nothing to build from — that's the one real error. */
+    @Test
+    fun avoidingEverythingIsAnErrorThatSaysWhy() = runTest {
+        val squat = Exercise(id = 61, name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL)
+
+        val last = generate(unusable, exercises = listOf(squat), split = RoutineSplit.LEGS, avoid = setOf(Limitation.KNEE)).last()
+
+        assertTrue(last is RoutineDraftState.Error)
+        assertTrue((last as RoutineDraftState.Error).message.contains("molestias"))
+    }
+
+    @Test
+    fun familiarExercisesAreCountedInTheExplanation() = runTest {
+        val repo = repository(listOf(bench, ohp, lateral, pushdown)).apply {
+            recentActivity = listOf(loggedSet(bench, hoursAgo = 200), loggedSet(ohp, hoursAgo = 200))
+        }
+
+        val draft = draftOf(generate(unusable, repo = repo))
+
+        assertTrue(draft.adjustments.toString(), draft.adjustments.contains("Incluye 2 ejercicios que ya haces."))
+    }
+
+    @Test
+    fun theTimeBudgetReachesTheAssembler() = runTest {
+        val unlimited = draftOf(generate(unusable))
+        val short = draftOf(generate(unusable, timeBudgetMinutes = 30))
+
+        assertTrue("${short.exercises.size} vs ${unlimited.exercises.size}", short.exercises.size < unlimited.exercises.size)
+    }
+
+    @Test
+    fun withNoHistoryThereIsNothingToExplain() = runTest {
+        assertTrue(draftOf(generate(unusable)).adjustments.isEmpty())
+    }
 
     private fun draftOf(states: List<RoutineDraftState>): RoutineDraft {
         val last = states.last()

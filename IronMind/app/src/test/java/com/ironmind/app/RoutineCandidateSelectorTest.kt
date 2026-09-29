@@ -2,9 +2,11 @@ package com.ironmind.app
 
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.util.RoutineCandidateSelector
+import com.ironmind.app.domain.util.TrainingHistory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -98,6 +100,32 @@ class RoutineCandidateSelectorTest {
         val result = RoutineCandidateSelector.select(RoutineSplit.CUSTOM, catalog)
 
         assertEquals(RoutineCandidateSelector.MAX_CANDIDATES, result.size)
+    }
+
+    /** With ~870 entries, what the athlete actually does must make the shortlist first. */
+    @Test
+    fun exercisesTheAthleteDoesComeFirstWithinTheirGroup() {
+        val catalog = listOf(
+            exercise(1, MuscleGroup.CHEST, instructions = "1) Curated."),
+            exercise(2, MuscleGroup.CHEST),
+        )
+        val history = TrainingHistory(setsByExercise = mapOf(2L to 12))
+
+        val result = RoutineCandidateSelector.select(RoutineSplit.PUSH, catalog, history = history)
+
+        assertEquals(listOf(2L, 1L), result.map { it.id })
+    }
+
+    @Test
+    fun avoidedJointsNeverReachTheShortlist() {
+        val catalog = listOf(
+            Exercise(id = 1, name = "Back Squat", muscleGroup = MuscleGroup.QUADS, equipment = Equipment.BARBELL),
+            Exercise(id = 2, name = "Lying Leg Curl", muscleGroup = MuscleGroup.HAMSTRINGS, equipment = Equipment.MACHINE),
+        )
+
+        val result = RoutineCandidateSelector.select(RoutineSplit.LEGS, catalog, avoid = setOf(Limitation.KNEE))
+
+        assertEquals(listOf(2L), result.map { it.id })
     }
 
     @Test

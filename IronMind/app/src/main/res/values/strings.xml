@@ -182,6 +182,16 @@
     <string name="routine_generator_regenerate">Regenerar</string>
     <string name="routine_generator_proposed_title">Rutina propuesta</string>
     <string name="routine_generator_rules_title">Rutina base (sin IA)</string>
+    <string name="routine_generator_time_label">Tiempo disponible</string>
+    <string name="routine_generator_minutes">%1$d min</string>
+    <string name="routine_generator_avoid_label">Evitar molestias en</string>
+    <string name="limitation_knee">Rodilla</string>
+    <string name="limitation_shoulder">Hombro</string>
+    <string name="limitation_lower_back">Espalda baja</string>
+    <string name="routine_generator_estimated">Duración estimada: ~%1$d min</string>
+    <string name="routine_generator_last_time">Última vez: %1$s × %2$d</string>
+    <string name="routine_generator_last_time_bodyweight">Última vez: %1$d reps</string>
+    <string name="routine_generator_suggested">sugerido: %1$s</string>
     <string name="routine_generator_name_label">Nombre de la rutina</string>
     <string name="routine_generator_save">Guardar rutina</string>
     <string name="routine_generator_sets_label">Series</string>
