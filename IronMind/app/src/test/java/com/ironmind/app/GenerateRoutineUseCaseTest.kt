@@ -61,6 +61,45 @@ class GenerateRoutineUseCaseTest {
         assertTrue(last is RoutineDraftState.Error)
     }
 
+    /**
+     * The error has to carry what the model said: "no valid routine" alone couldn't tell a model
+     * ignoring the format from one using a format the parser didn't know, and each needs a
+     * different fix.
+     */
+    @Test
+    fun invoke_unparseableErrorShowsWhatTheModelSaid() = runTest {
+        val llm = FakeLlmInferenceService(chunks = listOf("Claro, aquí tienes ", "una rutina genial"))
+        val useCase = GenerateRoutineUseCase(repository(listOf(bench)), llm)
+
+        val last = useCase(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY).toList().last()
+
+        val message = (last as RoutineDraftState.Error).message
+        assertTrue(message, message.contains("Claro, aquí tienes una rutina genial"))
+    }
+
+    @Test
+    fun invoke_anEmptyAnswerIsReportedAsEmpty() = runTest {
+        val llm = FakeLlmInferenceService(chunks = listOf("  ", "\n"))
+        val useCase = GenerateRoutineUseCase(repository(listOf(bench)), llm)
+
+        val last = useCase(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY).toList().last()
+
+        val message = (last as RoutineDraftState.Error).message
+        assertTrue(message, message.contains("sin responder nada"))
+    }
+
+    @Test
+    fun invoke_aLongAnswerIsCutShortInTheError() = runTest {
+        val llm = FakeLlmInferenceService(chunks = listOf("x".repeat(5_000)))
+        val useCase = GenerateRoutineUseCase(repository(listOf(bench)), llm)
+
+        val last = useCase(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY).toList().last()
+
+        val message = (last as RoutineDraftState.Error).message
+        assertTrue("was ${message.length} chars", message.length < 500)
+        assertTrue(message.endsWith("…"))
+    }
+
     @Test
     fun invoke_mapsModelNotFoundToFriendlyError() = runTest {
         val repo = repository(listOf(bench))

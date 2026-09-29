@@ -39,7 +39,10 @@ object RoutineGeneratorPromptBuilder {
                     "sin texto adicional, encabezados ni explicaciones:",
             )
             appendLine("id|series|repeticiones|descanso_segundos")
-            appendLine("Ejemplo: 12|3|10|90")
+            // A real id from the list, not a made-up one: a small model often copies the example
+            // verbatim, and an id outside the list was a guaranteed-empty routine.
+            appendLine("Ejemplo: ${candidates.firstOrNull()?.id ?: 1}|3|10|90")
+            appendLine("Escribe solo el número del id, sin el nombre del ejercicio.")
             append(
                 "Reglas: series entre 2 y 5, repeticiones entre 4 y 20, descanso entre 30 y 180 " +
                     "segundos.",

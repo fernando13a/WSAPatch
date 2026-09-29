@@ -132,6 +132,92 @@ class RoutineDraftParserTest {
         assertTrue(result.isEmpty())
     }
 
+    /**
+     * The shape a small model produces most: the candidate list it was shown is `id|name`, so it
+     * echoes the name back between the id and the numbers. Four-consecutive-numbers parsing threw
+     * every such line away and reported "no valid routine" for a perfectly usable answer.
+     */
+    @Test
+    fun acceptsTheNameEchoedBetweenTheIdAndTheNumbers() {
+        val response = "1|Bench Press|3|10|90\n3|Triceps Pushdown|3|12|60"
+
+        val result = RoutineDraftParser.parse(response, candidates)
+
+        assertEquals(listOf(1L, 3L), result.map { it.exerciseId })
+        assertEquals(listOf(3, 3), result.map { it.sets })
+        assertEquals(listOf(10, 12), result.map { it.reps })
+        assertEquals(listOf(90, 60), result.map { it.restSeconds })
+    }
+
+    @Test
+    fun acceptsTheNameInPlaceOfTheId() {
+        val response = "Overhead Press|4|8|120"
+
+        assertEquals(listOf(2L), RoutineDraftParser.parse(response, candidates).map { it.exerciseId })
+    }
+
+    @Test
+    fun matchesNamesIgnoringCaseAccentsAndMarkdown() {
+        val withSpanish = candidates + Exercise(
+            id = 4, name = "Dips", nameEs = "Fondos en paralelas",
+            muscleGroup = MuscleGroup.TRICEPS, equipment = Equipment.BODYWEIGHT,
+        )
+        val response = "- **bench press** | 3 | 10 | 90\nFONDOS EN PARALELAS|3|12|60"
+
+        assertEquals(listOf(1L, 4L), RoutineDraftParser.parse(response, withSpanish).map { it.exerciseId })
+    }
+
+    /** A markdown table: the header and the ---- rule have no numbers, the rows are data. */
+    @Test
+    fun readsTheRowsOfAMarkdownTable() {
+        val response = """
+            | id | series | repeticiones | descanso |
+            |----|--------|--------------|----------|
+            | 1  | 3      | 10           | 90       |
+            | 2  | 4      | 8            | 120      |
+        """.trimIndent()
+
+        assertEquals(listOf(1L, 2L), RoutineDraftParser.parse(response, candidates).map { it.exerciseId })
+    }
+
+    @Test
+    fun acceptsUnitsAfterTheNumbers() {
+        val row = RoutineDraftParser.parse("1|3 series|10 reps|90s", candidates).single()
+
+        assertEquals(3, row.sets)
+        assertEquals(10, row.reps)
+        assertEquals(90, row.restSeconds)
+    }
+
+    /**
+     * A name that ends in a number must be matched as a name, not read as the id it happens to end
+     * with — here "… 2" would otherwise become exercise 2.
+     */
+    @Test
+    fun aNameEndingInANumberIsNotMistakenForThatId() {
+        val numbered = listOf(
+            Exercise(id = 2, name = "Overhead Press", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.BARBELL),
+            Exercise(id = 7, name = "Cable Fly Variation 2", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.CABLE),
+        )
+
+        val result = RoutineDraftParser.parse("Cable Fly Variation 2|3|12|60", numbered)
+
+        assertEquals(listOf(7L), result.map { it.exerciseId })
+    }
+
+    /** The old parser's reading of a prefixed line still works when nothing better matches. */
+    @Test
+    fun stillReadsAnIdTrailingAPrefix() {
+        val result = RoutineDraftParser.parse("Press de banca: 1|3|10|90", candidates)
+
+        assertEquals(listOf(1L), result.map { it.exerciseId })
+    }
+
+    @Test
+    fun anUnknownNameIsSkippedNotGuessed() {
+        assertTrue(RoutineDraftParser.parse("Leg Press|3|10|90", candidates).isEmpty())
+    }
+
     @Test
     fun returnsEmptyCandidateListWhenNoCandidatesProvided() {
         val response = "1|3|10|90"

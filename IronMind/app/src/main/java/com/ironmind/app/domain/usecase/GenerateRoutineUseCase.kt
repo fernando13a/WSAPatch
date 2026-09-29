@@ -56,7 +56,7 @@ class GenerateRoutineUseCase @Inject constructor(
 
         val exercises = RoutineDraftParser.parse(response.toString(), candidates)
         if (exercises.isEmpty()) {
-            emit(RoutineDraftState.Error("La IA no devolvió una rutina válida. Intenta de nuevo."))
+            emit(RoutineDraftState.Error(unparseableResponseMessage(response.toString())))
             return@flow
         }
 
@@ -69,4 +69,26 @@ class GenerateRoutineUseCase @Inject constructor(
         }
         emit(RoutineDraftState.Error(message))
     }
+}
+
+/** How much of the model's raw answer an unparseable-response error shows. */
+private const val RESPONSE_EXCERPT_CHARS = 300
+
+/**
+ * The error for a response no line of which could be read as a routine row.
+ *
+ * Carries what the model actually said. The bare "the AI did not return a valid routine" gave no
+ * way to tell a model ignoring the format from one answering in a format the parser didn't know,
+ * or from one returning nothing at all — and each of those has a different fix. An empty answer
+ * gets its own wording because it points at the engine or the prompt, not at the parser.
+ */
+private fun unparseableResponseMessage(rawResponse: String): String {
+    val excerpt = rawResponse.trim()
+    if (excerpt.isEmpty()) return "La IA terminó sin responder nada. Intenta de nuevo."
+    val shown = if (excerpt.length > RESPONSE_EXCERPT_CHARS) {
+        excerpt.take(RESPONSE_EXCERPT_CHARS).trimEnd() + "…"
+    } else {
+        excerpt
+    }
+    return "La IA no devolvió una rutina válida. Intenta de nuevo.\n\nRespondió:\n$shown"
 }
