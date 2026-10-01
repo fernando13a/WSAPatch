@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.ironmind.app.data.local.IronMindDatabase
 import com.ironmind.app.data.local.Migrations
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -61,6 +62,44 @@ class MigrationTest {
             "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'index_set_logs_performedAt'",
         ).use { cursor ->
             assertEquals(1, cursor.count)
+        }
+    }
+
+    /**
+     * A routine saved before v6 keeps its exercises and prescription, and has no suggested
+     * weight — the debug build destroys the database on a missing migration, so a wrong one here
+     * would have cost every saved routine and logged set, not just failed loudly.
+     */
+    @Test
+    fun migrate5To6_addsTargetWeightWithoutLosingRoutines() {
+        helper.createDatabase(TEST_DB, 5).apply {
+            execSQL(
+                "INSERT INTO exercises (id, name, muscleGroup, equipment, description, isCustom, " +
+                    "instructions, imagePath, imageUrl, nameEs) VALUES " +
+                    "(1, 'Bench Press', 'CHEST', 'BARBELL', NULL, 0, NULL, NULL, NULL, NULL)",
+            )
+            execSQL(
+                "INSERT INTO routines (id, name, split, description, position, createdAt) " +
+                    "VALUES (1, 'Push', 'PUSH', NULL, 0, 1000)",
+            )
+            execSQL(
+                "INSERT INTO routine_exercise_cross_ref (routineId, exerciseId, position, targetSets, " +
+                    "targetReps, targetRestSeconds) VALUES (1, 1, 0, 4, 6, 150)",
+            )
+            close()
+        }
+
+        val migratedDb = helper.runMigrationsAndValidate(TEST_DB, 6, true, *Migrations.ALL)
+
+        migratedDb.query(
+            "SELECT targetSets, targetReps, targetRestSeconds, targetWeightKg FROM routine_exercise_cross_ref",
+        ).use { cursor ->
+            assertEquals(1, cursor.count)
+            cursor.moveToFirst()
+            assertEquals(4, cursor.getInt(0))
+            assertEquals(6, cursor.getInt(1))
+            assertEquals(150, cursor.getInt(2))
+            assertTrue("no suggestion for a routine saved before v6", cursor.isNull(3))
         }
     }
 
