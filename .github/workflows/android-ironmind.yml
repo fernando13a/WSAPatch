@@ -47,6 +47,23 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      # Room writes the current schema version to app/schemas while compiling. One that isn't
+      # committed means MigrationTestHelper can never verify the migration into it, and the next
+      # migration has nothing to start from. This runner is the only place the file can come from
+      # (the dev sandbox can't reach the Android Gradle Plugin), so print it for committing.
+      - name: Room schemas are committed
+        run: |
+          git add --intent-to-add app/schemas
+          if ! git diff --quiet -- app/schemas; then
+            echo "::error::Room generated a schema that is not committed under IronMind/app/schemas"
+            for f in $(git diff --name-only --relative -- app/schemas); do
+              echo "===== BEGIN $f ====="
+              cat "$f"
+              echo "===== END $f ====="
+            done
+            exit 1
+          fi
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

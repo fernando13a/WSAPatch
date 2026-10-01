@@ -53,6 +53,9 @@
     <string name="session_total_volume">Volumen total</string>
     <string name="session_sets_logged">Sets registrados</string>
     <string name="session_finish">Finalizar</string>
+    <string name="session_target">Objetivo: %1$d × %2$d · descanso %3$d s</string>
+    <string name="session_target_weight">Objetivo: %1$d × %2$d · %3$s · descanso %4$d s</string>
+    <string name="session_sets_progress">%1$d/%2$d series</string>
     <string name="session_exercises_title">Ejercicios</string>
     <string name="rest_title">Descanso</string>
     <string name="rest_dial_active">DESCANSO</string>

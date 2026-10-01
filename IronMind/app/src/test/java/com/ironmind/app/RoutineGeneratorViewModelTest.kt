@@ -13,6 +13,7 @@ import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
 import com.ironmind.app.domain.usecase.GenerateRoutineUseCase
 import com.ironmind.app.domain.util.RoutinePrescription
+import com.ironmind.app.domain.util.StartingWeight
 import com.ironmind.app.ui.routinegenerator.RoutineGeneratorViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -196,6 +197,32 @@ class RoutineGeneratorViewModelTest {
         val row = vm.draftRows.value.first { it.exerciseId == 1L }
         assertEquals(80.0, row.lastWeightKg!!, 0.0)
         assertEquals(5, row.lastReps)
+    }
+
+    /**
+     * The weight the draft suggested is saved with the routine, for the reps actually saved — so
+     * the session can show what to load. Before, it was lost the moment the routine was saved.
+     */
+    @Test
+    fun save_storesTheSuggestedWeightForTheSavedReps() = runTest(mainRule.dispatcher) {
+        val repo = repo().apply {
+            recentActivity = listOf(
+                com.ironmind.app.domain.model.SetLog(
+                    sessionId = 1, exerciseId = 1, setNumber = 1, weightKg = 80.0, reps = 5,
+                    performedAt = System.currentTimeMillis() - 5L * 24 * 3_600_000,
+                ),
+            )
+        }
+        val vm = viewModel(repo, pickAll)
+        vm.generate()
+        vm.updateRow(exerciseId = 1L, sets = 4, reps = 8, restSeconds = 120)
+
+        vm.save {}
+
+        val benchCall = repo.addedToRoutine.first { it.exerciseId == 1L }
+        assertEquals(StartingWeight.suggestKg(80.0, 5, 8)!!, benchCall.targetWeightKg!!, 0.0)
+        // Never done before: no history, no made-up number.
+        assertEquals(null, repo.addedToRoutine.first { it.exerciseId == 3L }.targetWeightKg)
     }
 
     // ---- Cambiar --------------------------------------------------------------------------

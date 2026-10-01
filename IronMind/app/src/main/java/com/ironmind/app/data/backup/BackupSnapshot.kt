@@ -64,6 +64,8 @@ data class CrossRefDto(
     val targetSets: Int = 3,
     val targetReps: Int = 10,
     val targetRestSeconds: Int = 90,
+    /** Absent in backups made before v6, which decode with no suggestion — the same as the DB. */
+    val targetWeightKg: Double? = null,
 )
 
 @Serializable
@@ -122,9 +124,9 @@ fun RoutineDto.toEntity() = RoutineEntity(
 )
 
 fun RoutineExerciseCrossRef.toDto() =
-    CrossRefDto(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds)
+    CrossRefDto(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds, targetWeightKg)
 fun CrossRefDto.toEntity() =
-    RoutineExerciseCrossRef(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds)
+    RoutineExerciseCrossRef(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds, targetWeightKg)
 
 fun WorkoutSessionEntity.toDto() = SessionDto(id, routineId, title, startedAt, endedAt, notes)
 fun SessionDto.toEntity() = WorkoutSessionEntity(id, routineId, title, startedAt, endedAt, notes)

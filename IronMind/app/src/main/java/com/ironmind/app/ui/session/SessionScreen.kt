@@ -63,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ironmind.app.R
 import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.MuscleGroup
+import com.ironmind.app.domain.model.ExercisePrescription
 import com.ironmind.app.domain.model.SetLog
 import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.model.WeightUnit
@@ -99,11 +100,15 @@ fun SessionScreen(
 
     // Hoisted so the Recovery Coach card (below AddSetCard) knows which muscle group is in focus.
     var selectedExerciseId by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(state.availableExercises) {
+    // A routine session starts on the routine's first exercise; the catalog's alphabetical first
+    // is only the fallback for a free session.
+    LaunchedEffect(state.exerciseBlocks, state.availableExercises) {
         if (selectedExerciseId == 0L) {
-            state.availableExercises.firstOrNull()?.let { selectedExerciseId = it.id }
+            (state.exerciseBlocks.firstOrNull()?.exerciseId ?: state.availableExercises.firstOrNull()?.id)
+                ?.let { selectedExerciseId = it }
         }
     }
+    val selectedBlock = state.exerciseBlocks.firstOrNull { it.exerciseId == selectedExerciseId }
     val selectedMuscleGroup = state.availableExercises.firstOrNull { it.id == selectedExerciseId }?.muscleGroup
     // Stale advice for a different muscle group should never linger once the selection changes.
     LaunchedEffect(selectedMuscleGroup) { viewModel.dismissRecoveryAdvice() }
@@ -195,6 +200,8 @@ fun SessionScreen(
                     selectedId = selectedExerciseId,
                     onSelectedIdChange = { selectedExerciseId = it },
                     unit = weightUnit,
+                    target = selectedBlock?.target,
+                    lastTopSet = selectedBlock?.lastTopSet,
                     onAddSet = { exerciseId, weight, reps, notes ->
                         viewModel.addSet(exerciseId, weight, reps, notes)
                     },
@@ -282,11 +289,23 @@ private fun AddSetCard(
     selectedId: Long,
     onSelectedIdChange: (Long) -> Unit,
     unit: WeightUnit,
+    target: ExercisePrescription?,
+    lastTopSet: SetLog?,
     onAddSet: (exerciseId: Long, weightKg: Double, reps: Int, notes: String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var weight by remember { mutableStateOf("") }
     var reps by remember { mutableStateOf("") }
+
+    // Start each exercise on what the routine asks for — or, without a target weight, on what was
+    // lifted last time — so a set is usually one tap instead of two fields typed between sets.
+    LaunchedEffect(selectedId, target, lastTopSet) {
+        val kg = target?.weightKg ?: lastTopSet?.weightKg?.takeIf { it > 0 }
+        val targetReps = target?.reps ?: lastTopSet?.reps
+        // Nothing to suggest (a free session, a first time) leaves whatever was typed alone.
+        kg?.let { weight = formatEditableWeight(it.toDisplayUnit(unit)) }
+        targetReps?.let { reps = it.toString() }
+    }
     var notes by remember { mutableStateOf("") }
     var showPlates by remember { mutableStateOf(false) }
     var showPhotoWeight by remember { mutableStateOf(false) }
@@ -365,8 +384,7 @@ private fun AddSetCard(
             onClick = {
                 if (weightValue != null && repsValue != null) {
                     onAddSet(selectedId, weightValue.displayUnitToKg(unit), repsValue, notes)
-                    weight = ""
-                    reps = ""
+                    // Weight and reps stay: the next set is usually the same. Notes are per set.
                     notes = ""
                 }
             },
@@ -514,6 +532,28 @@ private fun ExerciseBlockCard(
             IconButton(onClick = onOpen) {
                 Icon(Icons.Filled.Info, contentDescription = stringResource(R.string.instructions_title), tint = Cyan)
             }
+        }
+        block.target?.let { target ->
+            Spacer(Modifier.height(4.dp))
+            val line = target.weightKg?.let { kg ->
+                stringResource(R.string.session_target_weight, target.sets, target.reps, weightLabel(kg, unit), target.restSeconds)
+            } ?: stringResource(R.string.session_target, target.sets, target.reps, target.restSeconds)
+            Text(
+                "$line · " + stringResource(R.string.session_sets_progress, block.sets.size, target.sets),
+                color = Gold,
+                style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+            )
+        }
+        block.lastTopSet?.let { last ->
+            Text(
+                if (last.weightKg > 0) {
+                    stringResource(R.string.routine_generator_last_time, weightLabel(last.weightKg, unit), last.reps)
+                } else {
+                    stringResource(R.string.routine_generator_last_time_bodyweight, last.reps)
+                },
+                color = TextMuted,
+                style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+            )
         }
         Spacer(Modifier.height(8.dp))
         if (block.sets.isEmpty()) {

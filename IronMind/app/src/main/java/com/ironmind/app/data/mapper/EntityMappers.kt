@@ -7,6 +7,7 @@ import com.ironmind.app.data.local.entity.WorkoutSessionEntity
 import com.ironmind.app.data.local.relation.RoutineWithExercises
 import com.ironmind.app.data.local.relation.SessionWithSets
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.ExercisePrescription
 import com.ironmind.app.domain.model.Routine
 import com.ironmind.app.domain.model.RoutinePlan
 import com.ironmind.app.domain.model.SessionDetail
@@ -64,10 +65,25 @@ fun Routine.toEntity(): RoutineEntity = RoutineEntity(
     createdAt = createdAt,
 )
 
-fun RoutineWithExercises.toDomain(): RoutinePlan = RoutinePlan(
-    routine = routine.toDomain(),
-    exercises = exercises.map { it.toDomain() },
-)
+fun RoutineWithExercises.toDomain(): RoutinePlan {
+    val refsByExercise = crossRefs.associateBy { it.exerciseId }
+    return RoutinePlan(
+        routine = routine.toDomain(),
+        // The routine's own order. sortedBy is stable, so equal positions (older rows all saved
+        // at 0) keep the order they came in rather than shuffling.
+        exercises = exercises
+            .sortedBy { refsByExercise[it.id]?.position ?: Int.MAX_VALUE }
+            .map { it.toDomain() },
+        prescriptions = refsByExercise.mapValues { (_, ref) ->
+            ExercisePrescription(
+                sets = ref.targetSets,
+                reps = ref.targetReps,
+                restSeconds = ref.targetRestSeconds,
+                weightKg = ref.targetWeightKg,
+            )
+        },
+    )
+}
 
 // ---- Workout session ----------------------------------------------------------------
 fun WorkoutSessionEntity.toDomain(): WorkoutSession = WorkoutSession(

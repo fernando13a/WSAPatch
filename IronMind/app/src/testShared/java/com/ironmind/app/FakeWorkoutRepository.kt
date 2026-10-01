@@ -21,6 +21,7 @@ data class AddedToRoutineCall(
     val targetSets: Int,
     val targetReps: Int,
     val targetRestSeconds: Int,
+    val targetWeightKg: Double? = null,
 )
 
 /**
@@ -111,8 +112,9 @@ class FakeWorkoutRepository : WorkoutRepository {
         targetSets: Int,
         targetReps: Int,
         targetRestSeconds: Int,
+        targetWeightKg: Double?,
     ) {
-        addedToRoutine += AddedToRoutineCall(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds)
+        addedToRoutine += AddedToRoutineCall(routineId, exerciseId, position, targetSets, targetReps, targetRestSeconds, targetWeightKg)
     }
     override suspend fun removeExerciseFromRoutine(routineId: Long, exerciseId: Long) {
         removedFromRoutine += (routineId to exerciseId)

@@ -1,6 +1,7 @@
 package com.ironmind.app.ui.session
 
 import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.ExercisePrescription
 import com.ironmind.app.domain.model.SetLog
 
 /** Sets grouped under one exercise within the active session. */
@@ -10,6 +11,10 @@ data class ExerciseBlockUi(
     val sets: List<SetLog>,
     /** The catalog entry, for the row's thumbnail; null if the exercise was deleted from it. */
     val exercise: Exercise? = null,
+    /** What the routine asks of this exercise; null in a free session or for an added exercise. */
+    val target: ExercisePrescription? = null,
+    /** Heaviest set of the last *other* session this exercise was done in. */
+    val lastTopSet: SetLog? = null,
 )
 
 data class SessionUiState(

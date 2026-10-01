@@ -11,6 +11,7 @@ import com.ironmind.app.data.local.entity.RoutineEntity
 import com.ironmind.app.data.local.entity.RoutineExerciseCrossRef
 import com.ironmind.app.data.local.entity.SetLogEntity
 import com.ironmind.app.data.local.entity.WorkoutSessionEntity
+import com.ironmind.app.data.mapper.toDomain
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineSplit
@@ -63,6 +64,36 @@ class WorkoutDaoTest {
         assertEquals(1, plans.size)
         assertEquals(RoutineSplit.PUSH, plans.first().routine.split)
         assertEquals(setOf("Bench Press", "Overhead Press"), plans.first().exercises.map { it.name }.toSet())
+    }
+
+    /**
+     * Against real SQLite: a reorder is an UPDATE of `position`, which doesn't change the order
+     * the junction relation returns rows in — so the mapped plan has to sort by it, and the
+     * prescription stored on each row (v6 adds the weight) has to come back with it.
+     */
+    @Test
+    fun routinePlan_followsPositionAfterAReorderAndCarriesThePrescription() = runTest {
+        val routineId = dao.upsertRoutine(RoutineEntity(name = "Push Day", split = RoutineSplit.PUSH))
+        val benchId = dao.upsertExercise(
+            ExerciseEntity(name = "Bench Press", muscleGroup = MuscleGroup.CHEST, equipment = Equipment.BARBELL),
+        )
+        val ohpId = dao.upsertExercise(
+            ExerciseEntity(name = "Overhead Press", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.BARBELL),
+        )
+        dao.upsertRoutineExerciseCrossRef(
+            RoutineExerciseCrossRef(routineId, benchId, position = 0, targetSets = 4, targetReps = 5, targetRestSeconds = 150, targetWeightKg = 82.5),
+        )
+        dao.upsertRoutineExerciseCrossRef(RoutineExerciseCrossRef(routineId, ohpId, position = 1))
+
+        // Swap them the way the routine editor does.
+        dao.updateRoutineExercisePosition(routineId, benchId, 1)
+        dao.updateRoutineExercisePosition(routineId, ohpId, 0)
+
+        val plan = dao.observeRoutineWithExercises(routineId).first()!!.toDomain()
+
+        assertEquals(listOf(ohpId, benchId), plan.exercises.map { it.id })
+        assertEquals(82.5, plan.prescriptions.getValue(benchId).weightKg!!, 0.0)
+        assertEquals(150, plan.prescriptions.getValue(benchId).restSeconds)
     }
 
     @Test

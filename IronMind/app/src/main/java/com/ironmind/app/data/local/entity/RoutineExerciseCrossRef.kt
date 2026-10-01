@@ -35,4 +35,10 @@ data class RoutineExerciseCrossRef(
     val targetSets: Int = 3,
     val targetReps: Int = 10,
     val targetRestSeconds: Int = 90,
+    /**
+     * Suggested working weight, in kg — from the athlete's last session when the routine was
+     * generated (see `StartingWeight`). Null when there was nothing to suggest from, which is every
+     * routine created before v6 and every bodyweight movement.
+     */
+    val targetWeightKg: Double? = null,
 )

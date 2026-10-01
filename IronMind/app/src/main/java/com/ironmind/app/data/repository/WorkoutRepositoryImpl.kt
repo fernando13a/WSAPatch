@@ -97,6 +97,7 @@ class WorkoutRepositoryImpl @Inject constructor(
         targetSets: Int,
         targetReps: Int,
         targetRestSeconds: Int,
+        targetWeightKg: Double?,
     ) = withContext(dispatchers.io) {
         dao.upsertRoutineExerciseCrossRef(
             RoutineExerciseCrossRef(
@@ -106,6 +107,7 @@ class WorkoutRepositoryImpl @Inject constructor(
                 targetSets = targetSets,
                 targetReps = targetReps,
                 targetRestSeconds = targetRestSeconds,
+                targetWeightKg = targetWeightKg,
             ),
         )
     }

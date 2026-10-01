@@ -49,6 +49,8 @@ interface WorkoutRepository {
         targetSets: Int = 3,
         targetReps: Int = 10,
         targetRestSeconds: Int = 90,
+        /** Suggested working weight in kg; null when there's nothing to suggest from. */
+        targetWeightKg: Double? = null,
     )
 
     suspend fun removeExerciseFromRoutine(routineId: Long, exerciseId: Long)

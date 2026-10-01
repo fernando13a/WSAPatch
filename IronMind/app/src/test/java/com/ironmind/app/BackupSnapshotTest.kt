@@ -35,7 +35,7 @@ class BackupSnapshotTest {
         nameEs = "Press de Banca",
     )
     private val routine = RoutineEntity(id = 3, name = "Push", split = RoutineSplit.PUSH, position = 1, createdAt = 1000L)
-    private val crossRef = RoutineExerciseCrossRef(routineId = 3, exerciseId = 7, position = 0, targetSets = 4, targetReps = 8, targetRestSeconds = 120)
+    private val crossRef = RoutineExerciseCrossRef(routineId = 3, exerciseId = 7, position = 0, targetSets = 4, targetReps = 8, targetRestSeconds = 120, targetWeightKg = 82.5)
     private val session = WorkoutSessionEntity(id = 5, routineId = 3, title = "Morning", startedAt = 2000L, endedAt = 3000L, notes = "felt strong")
     private val setLog = SetLogEntity(
         id = 11,
@@ -95,5 +95,24 @@ class BackupSnapshotTest {
         assertEquals(MuscleGroup.QUADS, entity.muscleGroup)
         assertEquals(true, entity.isCustom) // default applied
         assertEquals(0, decoded.routines.size) // default empty list
+    }
+
+    /** A backup made before routines stored a weight restores with no suggestion, not a failure. */
+    @Test
+    fun aRoutineRowFromBeforeTheTargetWeightRestoresWithoutOne() {
+        val payload = """
+            {
+              "version": 1,
+              "exportedAt": 1,
+              "routineExercises": [
+                {"routineId": 3, "exerciseId": 7, "position": 0, "targetSets": 4, "targetReps": 8, "targetRestSeconds": 120}
+              ]
+            }
+        """.trimIndent()
+
+        val entity = json.decodeFromString(BackupSnapshot.serializer(), payload).routineExercises.single().toEntity()
+
+        assertEquals(RoutineExerciseCrossRef(3, 7, position = 0, targetSets = 4, targetReps = 8, targetRestSeconds = 120), entity)
+        assertEquals(null, entity.targetWeightKg)
     }
 }

@@ -20,6 +20,7 @@ import com.ironmind.app.domain.usecase.ExplainRoutineUseCase
 import com.ironmind.app.domain.usecase.GenerateRoutineUseCase
 import com.ironmind.app.domain.util.RoutinePrescription
 import com.ironmind.app.domain.util.RoutineSwap
+import com.ironmind.app.domain.util.StartingWeight
 import com.ironmind.app.domain.util.TrainingHistory
 import com.ironmind.app.domain.util.isCompound
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -300,6 +301,11 @@ class RoutineGeneratorViewModel @Inject constructor(
                     targetSets = row.sets,
                     targetReps = row.reps,
                     targetRestSeconds = row.restSeconds,
+                    // The suggestion the draft showed, for the reps actually saved — so the
+                    // session can say what to load, not only what was done last time.
+                    targetWeightKg = row.lastWeightKg?.let { kg ->
+                        row.lastReps?.let { reps -> StartingWeight.suggestKg(kg, reps, row.reps) }
+                    },
                 )
             }
             onDone(routineId)

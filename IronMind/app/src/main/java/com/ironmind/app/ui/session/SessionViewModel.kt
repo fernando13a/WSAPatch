@@ -10,6 +10,7 @@ import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.model.WorkoutSession
 import com.ironmind.app.domain.repository.WorkoutRepository
 import com.ironmind.app.domain.usecase.GetRecoveryAdviceUseCase
+import com.ironmind.app.domain.util.TrainingHistory
 import com.ironmind.app.notification.RestTimerNotifier
 import com.ironmind.app.ui.navigation.Destinations
 import com.ironmind.app.ui.util.displayName
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -73,11 +75,29 @@ class SessionViewModel @Inject constructor(
     private val routinePlanFlow =
         if (argRoutineId != 0L) repository.observeRoutinePlan(argRoutineId) else flowOf(null)
 
+    /**
+     * For each routine exercise, the heaviest set of the last session it was done in — the
+     * "last time" reference shown while training. Never this session's own sets: those are on
+     * screen already, and counting them would turn "last time" into "a minute ago".
+     */
+    private val lastTopSetsFlow = routinePlanFlow.map { plan ->
+        val thisSession = activeSessionId.value.takeIf { it != 0L } ?: argSessionId
+        buildMap {
+            plan?.exercises.orEmpty().forEach { exercise ->
+                val earlier = repository.getRecentSetLogs(exercise.id, LAST_PERFORMANCE_SETS)
+                    .filter { it.exerciseId == exercise.id && it.sessionId != thisSession }
+                TrainingHistory.from(earlier, emptyMap(), System.currentTimeMillis())
+                    .lastTopSet[exercise.id]?.let { put(exercise.id, it) }
+            }
+        }
+    }
+
     val uiState: StateFlow<SessionUiState> = combine(
         detailFlow,
         repository.observeExercises(),
         routinePlanFlow,
-    ) { detail, exercises, plan ->
+        lastTopSetsFlow,
+    ) { detail, exercises, plan, lastTopSets ->
         val names = exercises.associate { it.id to it.displayName() }
         val exercisesById = exercises.associateBy { it.id }
         val setsByExercise = (detail?.sets ?: emptyList()).groupBy { it.exerciseId }
@@ -101,6 +121,8 @@ class SessionViewModel @Inject constructor(
                     exerciseName = names[id] ?: "Ejercicio",
                     sets = setsByExercise[id]?.sortedBy { it.setNumber } ?: emptyList(),
                     exercise = exercisesById[id],
+                    target = plan?.prescriptions?.get(id),
+                    lastTopSet = lastTopSets[id],
                 )
             },
             availableExercises = exercises,
@@ -145,7 +167,18 @@ class SessionViewModel @Inject constructor(
     }
 
     // ---- Set logging ----------------------------------------------------------------
-    fun addSet(exerciseId: Long, weightKg: Double, reps: Int, notes: String?, autoRestSeconds: Int? = 90) {
+    /**
+     * Logs a set and starts the rest timer — for the routine's own rest for this exercise when it
+     * has one. It used to be a flat 90 s whatever the routine said, so a strength day's 150 s rest
+     * ended a minute early on every set.
+     */
+    fun addSet(
+        exerciseId: Long,
+        weightKg: Double,
+        reps: Int,
+        notes: String?,
+        autoRestSeconds: Int? = restFor(exerciseId),
+    ) {
         if (exerciseId == 0L) return
         val nextSetNumber =
             (uiState.value.exerciseBlocks.firstOrNull { it.exerciseId == exerciseId }?.sets?.size ?: 0) + 1
@@ -173,6 +206,10 @@ class SessionViewModel @Inject constructor(
     fun deleteSet(set: SetLog) {
         viewModelScope.launch { repository.deleteSetLog(set) }
     }
+
+    private fun restFor(exerciseId: Long): Int =
+        uiState.value.exerciseBlocks.firstOrNull { it.exerciseId == exerciseId }?.target?.restSeconds
+            ?: DEFAULT_REST_SECONDS
 
     fun finishSession(onDone: () -> Unit) {
         stopRest()
@@ -214,5 +251,13 @@ class SessionViewModel @Inject constructor(
         // Don't leave a stuck "resting" notification behind if the screen is torn down mid-rest.
         restNotifier.cancel()
         super.onCleared()
+    }
+
+    private companion object {
+        /** Rest after a set of an exercise the routine prescribes nothing for (or a free session). */
+        const val DEFAULT_REST_SECONDS = 90
+
+        /** Enough recent sets to reach back past today's to the previous session. */
+        const val LAST_PERFORMANCE_SETS = 30
     }
 }
