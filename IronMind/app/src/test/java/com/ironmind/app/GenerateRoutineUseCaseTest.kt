@@ -218,6 +218,35 @@ class GenerateRoutineUseCaseTest {
         assertTrue((last as RoutineRefineState.Failed).message.contains("misma rutina"))
     }
 
+    /**
+     * After a swap the draft can hold an isolation ahead of a compound. The same exercises back
+     * from the model come out of the assembler compounds-first — a reorder nobody asked for, which
+     * used to be applied and announced as an adjustment.
+     */
+    @Test
+    fun theSameExercisesInAnotherOrderAreNoChange() = runTest {
+        val current = listOf(row(lateral), row(bench), row(pushdown))
+
+        val last = refine(FakeLlmInferenceService(chunks = listOf("1, 2, 3")), current).last()
+
+        assertTrue("$last", (last as RoutineRefineState.Failed).message.contains("misma rutina"))
+    }
+
+    /** Swaps and adjustments follow what the draft was built from, not the form as it is now. */
+    @Test
+    fun theDraftRemembersWhatItWasBuiltFrom() = runTest {
+        val repo = repository(listOf(bench, ohp, lateral, pushdown)).apply {
+            recentActivity = listOf(
+                SetLog(sessionId = 1, exerciseId = bench.id, setNumber = 1, weightKg = 80.0, reps = 5, performedAt = NOW - 100 * HOUR),
+            )
+        }
+
+        val draft = draftOf(generate(FakeLlmInferenceService(chunks = listOf("1, 2")), repo = repo, avoid = setOf(Limitation.KNEE)))
+
+        assertEquals(setOf(Limitation.KNEE), draft.avoid)
+        assertEquals(1, draft.history.familiarity(bench.id))
+    }
+
     @Test
     fun aBlankInstructionAsksForOneWithoutCallingTheModel() = runTest {
         val llm = FakeLlmInferenceService(chunks = listOf("1"))

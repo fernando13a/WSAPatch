@@ -1,6 +1,7 @@
 package com.ironmind.app
 
 import com.ironmind.app.domain.ai.LlmInferenceService
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -13,6 +14,12 @@ class FakeLlmInferenceService(
 
     /** Every prompt received, in order — lets a test check what the model was actually asked. */
     val prompts = mutableListOf<String>()
+
+    /**
+     * When set, each answer waits for it before streaming — a model still "thinking", so a test
+     * can act in between. Set it after any request that should answer straight away.
+     */
+    var gate: CompletableDeferred<Unit>? = null
 
     /** The temperature of the last request, or null when it used the default sampling. */
     var lastTemperature: Float? = null
@@ -32,6 +39,7 @@ class FakeLlmInferenceService(
 
     private fun respond(prompt: String): Flow<String> = flow {
         prompts += prompt
+        gate?.await()
         error?.let { throw it }
         chunks.forEach { emit(it) }
     }

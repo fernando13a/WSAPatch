@@ -104,6 +104,9 @@ class GenerateRoutineUseCase @Inject constructor(
                     notice = (choice as? ModelChoice.Unusable)?.reason,
                     adjustments = adjustments(candidates, rows, history, avoid),
                     goal = goal,
+                    availableEquipment = availableEquipment,
+                    avoid = avoid,
+                    history = history,
                 ),
             ),
         )
@@ -159,8 +162,10 @@ class GenerateRoutineUseCase @Inject constructor(
                 val rows = RoutineAssembler
                     .assemble(split, goal, candidates, choice.exercises, fillGaps = false)
                     .map { currentById[it.exerciseId] ?: it.withLastTopSet(history) }
+                // Compared as sets: the assembler puts compounds first, so after a swap the same
+                // exercises can come back in another order — that is not a change anyone asked for.
                 emit(
-                    if (rows.map { it.exerciseId } == current.map { it.exerciseId }) {
+                    if (rows.mapTo(HashSet()) { it.exerciseId } == current.mapTo(HashSet()) { it.exerciseId }) {
                         RoutineRefineState.Failed(
                             "La IA devolvió la misma rutina, así que no cambió nada. Prueba a pedirlo de otra forma.",
                         )

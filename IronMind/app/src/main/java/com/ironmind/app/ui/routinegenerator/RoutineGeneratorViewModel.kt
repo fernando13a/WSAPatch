@@ -159,6 +159,7 @@ class RoutineGeneratorViewModel @Inject constructor(
     // ---- "Cambiar" ------------------------------------------------------------------------
 
     fun openSwap(exerciseId: Long) {
+        val draft = currentDraft() ?: return
         val state = _ui.value
         val current = state.exercisesById[exerciseId] ?: return
         _swapMenu.value = SwapMenu(
@@ -167,8 +168,10 @@ class RoutineGeneratorViewModel @Inject constructor(
                 current = current,
                 catalog = state.exercisesById.values,
                 inDraft = _draftRows.value.mapTo(HashSet()) { it.exerciseId },
-                availableEquipment = state.availableEquipment,
-                avoid = state.avoid,
+                // What the draft was built with, not what the form says now.
+                availableEquipment = draft.availableEquipment ?: Equipment.entries.toSet(),
+                avoid = draft.avoid,
+                history = draft.history,
             ),
         )
     }
@@ -225,21 +228,30 @@ class RoutineGeneratorViewModel @Inject constructor(
         val draft = currentDraft() ?: return
         val rows = _draftRows.value
         if (rows.isEmpty()) return
-        val state = _ui.value
         refineJob?.cancel()
+        // The model runs one request at a time: an explanation still streaming would hold it, and
+        // the wait would count against the adjustment's time limit. An adjusted routine needs a
+        // new explanation anyway.
+        invalidateExplanation()
         refineJob = viewModelScope.launch {
             generateRoutine.refine(
                 split = draft.split,
                 goal = draft.goal,
                 current = rows,
                 instruction = instruction,
-                availableEquipment = state.availableEquipment,
-                avoid = state.avoid,
+                availableEquipment = draft.availableEquipment,
+                avoid = draft.avoid,
             ).collect { result ->
-                _refineState.value = result
-                if (result is RoutineRefineState.Applied) {
-                    _draftRows.value = result.rows
-                    invalidateExplanation()
+                when {
+                    result !is RoutineRefineState.Applied -> _refineState.value = result
+                    // Built from the rows as they were when asked: applying it now would undo a
+                    // removal or an edit made while the model was thinking.
+                    _draftRows.value != rows -> _refineState.value = RoutineRefineState.Failed(EDITED_WHILE_REFINING)
+                    else -> {
+                        _refineState.value = result
+                        _draftRows.value = result.rows
+                        invalidateExplanation()
+                    }
                 }
             }
         }
@@ -284,15 +296,19 @@ class RoutineGeneratorViewModel @Inject constructor(
         val rows = _draftRows.value
         if (rows.isEmpty()) return
         val state = _ui.value
+        val draft = currentDraft()
+        // The split the exercises were chosen for. The form's chip may have moved on since, and a
+        // push day saved as "LEGS" would be filed and suggested as a leg day.
+        val split = draft?.split ?: state.split
         viewModelScope.launch {
             // Fallback name only matters if the user never typed one — the screen encourages
             // naming the routine, this just guarantees upsertRoutine never gets a blank name.
             // "(IA)" only when the model actually chose: a rule-built fallback isn't the AI's.
-            val fromRules = currentDraft()?.source == RoutineDraft.Source.RULES
+            val fromRules = draft?.source == RoutineDraft.Source.RULES
             val name = state.routineName.trim().ifBlank {
-                if (fromRules) state.split.name else "${state.split.name} (IA)"
+                if (fromRules) split.name else "${split.name} (IA)"
             }
-            val routineId = repository.upsertRoutine(Routine(name = name, split = state.split))
+            val routineId = repository.upsertRoutine(Routine(name = name, split = split))
             rows.forEachIndexed { index, row ->
                 repository.addExerciseToRoutine(
                     routineId = routineId,
@@ -315,5 +331,8 @@ class RoutineGeneratorViewModel @Inject constructor(
     private companion object {
         /** Enough to cover the last session of an exercise even with many sets logged in it. */
         const val LAST_PERFORMANCE_SETS = 30
+
+        const val EDITED_WHILE_REFINING =
+            "Cambiaste la rutina mientras la IA la ajustaba, así que dejé tus cambios. Pídelo de nuevo si quieres."
     }
 }

@@ -15,7 +15,9 @@ import com.ironmind.app.domain.usecase.GenerateRoutineUseCase
 import com.ironmind.app.domain.util.RoutinePrescription
 import com.ironmind.app.domain.util.StartingWeight
 import com.ironmind.app.ui.routinegenerator.RoutineGeneratorViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -247,6 +249,35 @@ class RoutineGeneratorViewModelTest {
         assertEquals("a press for a press first", dbPress.id, options.first().id)
     }
 
+    /** Unticking every chip after generating used to leave every "Cambiar" menu empty. */
+    @Test
+    fun swapsFollowTheEquipmentTheDraftWasBuiltWithNotTheFormNow() = runTest(mainRule.dispatcher) {
+        val repo = FakeWorkoutRepository().apply { exercisesFlow.value = catalog + dbPress + frontRaise }
+        val vm = viewModel(repo, pickAll)
+        vm.setTimeBudget(30)
+        vm.generate()
+        Equipment.entries.forEach { vm.toggleEquipment(it) }
+        assertTrue(vm.ui.value.availableEquipment.isEmpty())
+
+        vm.openSwap(ohp.id)
+
+        assertEquals(dbPress.id, vm.swapMenu.value!!.options.first().id)
+    }
+
+    /** A push day saved after moving the split chip used to be filed as the new split. */
+    @Test
+    fun save_filesTheRoutineUnderTheSplitItWasBuiltFor() = runTest(mainRule.dispatcher) {
+        val repo = repo()
+        val vm = viewModel(repo, pickAll)
+        vm.generate() // push, the form's default
+        vm.setSplit(RoutineSplit.LEGS)
+
+        vm.save {}
+
+        assertEquals(RoutineSplit.PUSH, repo.upsertedRoutines.single().split)
+        assertEquals("PUSH (IA)", repo.upsertedRoutines.single().name)
+    }
+
     @Test
     fun swappingLikeForLikeKeepsTheRowsNumbers() = runTest(mainRule.dispatcher) {
         val repo = FakeWorkoutRepository().apply { exercisesFlow.value = catalog + dbPress }
@@ -307,6 +338,28 @@ class RoutineGeneratorViewModelTest {
 
         assertTrue(vm.refineState.value is RoutineRefineState.Applied)
         assertEquals(listOf(bench.id, lateral.id), vm.draftRows.value.map { it.exerciseId })
+    }
+
+    /**
+     * The answer is built from the rows as they were when asked. Applying it after the athlete
+     * edited the draft would undo the edit — or bring back a row they had just removed.
+     */
+    @Test
+    fun aRefineThatAnswersAfterAnEditKeepsTheEdit() = runTest(mainRule.dispatcher) {
+        val llm = FakeLlmInferenceService(chunks = listOf("1, 3"))
+        val vm = viewModel(repo(), llm)
+        vm.generate()
+        val thinking = CompletableDeferred<Unit>()
+        llm.gate = thinking
+
+        vm.refine("sin press militar")
+        vm.updateRow(lateral.id, sets = 5, reps = 15, restSeconds = 45) // while the model thinks
+        thinking.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue("${vm.refineState.value}", vm.refineState.value is RoutineRefineState.Failed)
+        assertEquals(listOf(bench.id, ohp.id, lateral.id), vm.draftRows.value.map { it.exerciseId })
+        assertEquals(5, vm.draftRows.value.single { it.exerciseId == lateral.id }.sets)
     }
 
     @Test

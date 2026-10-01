@@ -181,7 +181,6 @@
     <string name="routine_generator_goal_label">Objetivo</string>
     <string name="routine_generator_equipment_label">Equipo disponible</string>
     <string name="routine_generator_generate">Generar con IA</string>
-    <string name="routine_generator_generating">Generando rutina…</string>
     <string name="routine_generator_regenerate">Regenerar</string>
     <string name="routine_generator_proposed_title">Rutina propuesta</string>
     <string name="routine_generator_rules_title">Rutina base (sin IA)</string>

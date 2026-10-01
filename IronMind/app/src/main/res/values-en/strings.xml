@@ -179,7 +179,6 @@
     <string name="routine_generator_goal_label">Goal</string>
     <string name="routine_generator_equipment_label">Available equipment</string>
     <string name="routine_generator_generate">Generate with AI</string>
-    <string name="routine_generator_generating">Generating routine…</string>
     <string name="routine_generator_regenerate">Regenerate</string>
     <string name="routine_generator_proposed_title">Proposed routine</string>
     <string name="routine_generator_rules_title">Base routine (no AI)</string>

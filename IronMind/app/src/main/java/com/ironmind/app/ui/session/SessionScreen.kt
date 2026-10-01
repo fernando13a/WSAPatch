@@ -297,14 +297,20 @@ private fun AddSetCard(
     var weight by remember { mutableStateOf("") }
     var reps by remember { mutableStateOf("") }
 
-    // Start each exercise on what the routine asks for — or, without a target weight, on what was
-    // lifted last time — so a set is usually one tap instead of two fields typed between sets.
+    // Start each exercise on what the routine asks for, or on last time (see SetPrefill), so a set
+    // is usually one tap. Weight and reps stay after a set — the next one is usually the same — so
+    // picking another exercise must replace them, blank where there's nothing to go on: otherwise
+    // the squat's 100 kg × 5 is one tap from being logged as a curl.
+    var prefilledFor by remember { mutableLongStateOf(0L) }
     LaunchedEffect(selectedId, target, lastTopSet) {
-        val kg = target?.weightKg ?: lastTopSet?.weightKg?.takeIf { it > 0 }
-        val targetReps = target?.reps ?: lastTopSet?.reps
-        // Nothing to suggest (a free session, a first time) leaves whatever was typed alone.
-        kg?.let { weight = formatEditableWeight(it.toDisplayUnit(unit)) }
-        targetReps?.let { reps = it.toString() }
+        // The same exercise with its suggestion arriving late: only fill in what's still blank.
+        val sameExercise = selectedId == prefilledFor
+        prefilledFor = selectedId
+        val prefill = SetPrefill.from(target, lastTopSet)
+        if (!sameExercise || weight.isBlank()) {
+            weight = prefill.weightKg?.let { formatEditableWeight(it.toDisplayUnit(unit)) }.orEmpty()
+        }
+        if (!sameExercise || reps.isBlank()) reps = prefill.reps?.toString().orEmpty()
     }
     var notes by remember { mutableStateOf("") }
     var showPlates by remember { mutableStateOf(false) }
@@ -535,7 +541,7 @@ private fun ExerciseBlockCard(
         }
         block.target?.let { target ->
             Spacer(Modifier.height(4.dp))
-            val line = target.weightKg?.let { kg ->
+            val line = target.weightKg?.takeIf { it > 0 }?.let { kg ->
                 stringResource(R.string.session_target_weight, target.sets, target.reps, weightLabel(kg, unit), target.restSeconds)
             } ?: stringResource(R.string.session_target, target.sets, target.reps, target.restSeconds)
             Text(

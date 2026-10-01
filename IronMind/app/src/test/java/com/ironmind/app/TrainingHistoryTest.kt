@@ -101,6 +101,17 @@ class TrainingHistoryTest {
         assertTrue(more < sameReps)
     }
 
+    /** A 2 kg raise rounded to the 2.5 kg plate step came out as "Sugerido: 0 kg". */
+    @Test
+    fun aLightLoadIsRoundedFinelyAndNeverToZero() {
+        // 2 kg × 12 → e1RM 2.8 → for 12 reps 2.0 (was floor(0.8) × 2.5 = 0)
+        assertEquals(2.0, StartingWeight.suggestKg(2.0, 12, 12)!!, 0.0)
+        // 7.5 kg × 10 → e1RM 10 → for 12 reps 7.14 → 7.0, not 5.0
+        assertEquals(7.0, StartingWeight.suggestKg(7.5, 10, 12)!!, 0.0)
+        // Too light to suggest anything at that many reps: nothing, not 0.
+        assertNull(StartingWeight.suggestKg(0.5, 5, 30))
+    }
+
     @Test
     fun bodyweightWorkGetsNoWeightSuggestion() {
         assertNull(StartingWeight.suggestKg(0.0, 12, 10))

@@ -1,5 +1,7 @@
 package com.ironmind.app.domain.model
 
+import com.ironmind.app.domain.util.TrainingHistory
+
 /**
  * A proposed routine, staged for the user to review, edit, or discard before anything is
  * written to [com.ironmind.app.domain.repository.WorkoutRepository]. Never persisted directly —
@@ -22,6 +24,15 @@ data class RoutineDraft(
     val adjustments: List<String> = emptyList(),
     /** The goal it was built for — the form may have changed since, the draft hasn't. */
     val goal: TrainingGoal = TrainingGoal.HYPERTROPHY,
+    /**
+     * The equipment and joints to spare it was built with (null equipment: all of it). Swaps and
+     * adjustments follow these, not the form: unticking a chip after generating used to leave every
+     * "Cambiar" menu empty for a routine built with that equipment.
+     */
+    val availableEquipment: Set<Equipment>? = null,
+    val avoid: Set<Limitation> = emptySet(),
+    /** The athlete's log as it was read for this draft — "Cambiar" offers what they do first. */
+    val history: TrainingHistory = TrainingHistory.EMPTY,
 ) {
     enum class Source {
         /** The model picked and ordered the exercises; Kotlin balanced and prescribed them. */
@@ -40,7 +51,7 @@ data class RoutineDraftExercise(
     /**
      * The top set of the last session this exercise was logged in, if any — shown on the draft
      * with a suggested weight for [reps] (see [com.ironmind.app.domain.util.StartingWeight]).
-     * Display only: routines don't store a target weight, so saving leaves these behind.
+     * Saving stores that suggestion as the routine's target weight, not these numbers themselves.
      */
     val lastWeightKg: Double? = null,
     val lastReps: Int? = null,
