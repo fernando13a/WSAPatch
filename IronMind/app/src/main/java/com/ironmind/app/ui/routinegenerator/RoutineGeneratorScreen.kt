@@ -1,0 +1,599 @@
+package com.ironmind.app.ui.routinegenerator
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ironmind.app.R
+import com.ironmind.app.domain.ai.RoutineRefinePromptBuilder
+import com.ironmind.app.domain.model.Equipment
+import com.ironmind.app.domain.model.Exercise
+import com.ironmind.app.domain.model.Limitation
+import com.ironmind.app.domain.model.RoutineDraftExercise
+import com.ironmind.app.domain.model.RoutineDraft
+import com.ironmind.app.domain.model.RoutineDraftState
+import com.ironmind.app.domain.model.RoutineRefineState
+import com.ironmind.app.domain.model.RoutineSplit
+import com.ironmind.app.domain.model.SuggestionState
+import com.ironmind.app.domain.model.TrainingGoal
+import com.ironmind.app.domain.model.WeightUnit
+import com.ironmind.app.domain.util.RoutinePrescription
+import com.ironmind.app.domain.util.StartingWeight
+import com.ironmind.app.ui.components.AccentButton
+import com.ironmind.app.ui.components.Chip
+import com.ironmind.app.ui.components.GlassCard
+import com.ironmind.app.ui.components.SectionTitle
+import com.ironmind.app.ui.theme.Black
+import com.ironmind.app.ui.theme.Cyan
+import com.ironmind.app.ui.theme.Gold
+import com.ironmind.app.ui.theme.TextMuted
+import com.ironmind.app.ui.util.displayName
+import com.ironmind.app.ui.util.label
+import com.ironmind.app.ui.util.weightLabel
+import kotlinx.coroutines.delay
+
+private val ErrorRed = Color(0xFFFF6B6B)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RoutineGeneratorScreen(
+    onBack: () -> Unit,
+    onRoutineSaved: (routineId: Long) -> Unit,
+    viewModel: RoutineGeneratorViewModel = hiltViewModel(),
+) {
+    val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val draftState by viewModel.draftState.collectAsStateWithLifecycle()
+    val draftRows by viewModel.draftRows.collectAsStateWithLifecycle()
+    val weightUnit by viewModel.weightUnit.collectAsStateWithLifecycle()
+    val explanation by viewModel.explanation.collectAsStateWithLifecycle()
+    val refineState by viewModel.refineState.collectAsStateWithLifecycle()
+    val swapMenu by viewModel.swapMenu.collectAsStateWithLifecycle()
+
+    Scaffold(
+        containerColor = Black,
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.routine_generator_title), color = Gold, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Cyan)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Black),
+            )
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                FormCard(
+                    split = ui.split,
+                    goal = ui.goal,
+                    availableEquipment = ui.availableEquipment,
+                    timeBudgetMinutes = ui.timeBudgetMinutes,
+                    avoid = ui.avoid,
+                    canGenerate = ui.canGenerate,
+                    isGenerating = draftState is RoutineDraftState.Loading,
+                    onSplitChange = viewModel::setSplit,
+                    onGoalChange = viewModel::setGoal,
+                    onToggleEquipment = viewModel::toggleEquipment,
+                    onTimeBudgetChange = viewModel::setTimeBudget,
+                    onToggleLimitation = viewModel::toggleLimitation,
+                    onGenerate = viewModel::generate,
+                )
+            }
+
+            when (val state = draftState) {
+                null -> Unit
+
+                is RoutineDraftState.Loading -> item { GeneratingCard(state.phase) }
+
+                is RoutineDraftState.Error -> item {
+                    GlassCard {
+                        Text(state.message, color = ErrorRed)
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = viewModel::generate) {
+                            Text(stringResource(R.string.action_retry), color = Cyan)
+                        }
+                    }
+                }
+
+                is RoutineDraftState.Success -> {
+                    item {
+                        GlassCard {
+                            val fromRules = state.draft.source == RoutineDraft.Source.RULES
+                            SectionTitle(
+                                stringResource(
+                                    if (fromRules) R.string.routine_generator_rules_title
+                                    else R.string.routine_generator_proposed_title,
+                                ),
+                                accent = if (fromRules) Gold else Cyan,
+                            )
+                            // Why the model's choice wasn't used. Shown rather than hidden: "no
+                            // model downloaded" and "the model failed to start" need different
+                            // actions, and a silent fallback would look like the AI chose this.
+                            state.draft.notice?.let { notice ->
+                                Spacer(Modifier.height(8.dp))
+                                Text(notice, color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                            }
+                            // What was tailored to this athlete, so a muscle with one exercise or
+                            // a missing squat reads as a decision rather than a bug.
+                            state.draft.adjustments.forEach { line ->
+                                Spacer(Modifier.height(6.dp))
+                                Text("• $line", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            // From the rows as edited, so it moves when a set or a rest changes.
+                            Text(
+                                stringResource(
+                                    R.string.routine_generator_estimated,
+                                    RoutinePrescription.estimatedSessionMinutes(draftRows),
+                                ),
+                                color = Cyan,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = ui.routineName,
+                                onValueChange = viewModel::setRoutineName,
+                                label = { Text(stringResource(R.string.routine_generator_name_label)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+
+                    items(draftRows, key = { it.exerciseId }) { row ->
+                        DraftRowCard(
+                            exerciseName = ui.exercisesById[row.exerciseId]?.displayName() ?: row.exerciseId.toString(),
+                            row = row,
+                            weightUnit = weightUnit,
+                            swapOptions = swapMenu?.takeIf { it.exerciseId == row.exerciseId }?.options,
+                            onOpenSwap = { viewModel.openSwap(row.exerciseId) },
+                            onCloseSwap = viewModel::closeSwap,
+                            onSwap = { replacement -> viewModel.swapRow(row.exerciseId, replacement) },
+                            onUpdate = { sets, reps, rest -> viewModel.updateRow(row.exerciseId, sets, reps, rest) },
+                            onRemove = { viewModel.removeRow(row.exerciseId) },
+                        )
+                    }
+
+                    item {
+                        RefineCard(
+                            state = refineState,
+                            enabled = draftRows.isNotEmpty(),
+                            onRefine = viewModel::refine,
+                            onDismiss = viewModel::dismissRefineMessage,
+                        )
+                    }
+
+                    item {
+                        ExplanationCard(
+                            state = explanation,
+                            enabled = draftRows.isNotEmpty(),
+                            onExplain = viewModel::explain,
+                        )
+                    }
+
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            AccentButton(
+                                text = stringResource(R.string.routine_generator_save),
+                                enabled = draftRows.isNotEmpty(),
+                                onClick = { viewModel.save(onRoutineSaved) },
+                            )
+                            TextButton(onClick = viewModel::generate) {
+                                Text(stringResource(R.string.routine_generator_regenerate), color = Cyan)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FormCard(
+    split: RoutineSplit,
+    goal: TrainingGoal,
+    availableEquipment: Set<Equipment>,
+    timeBudgetMinutes: Int,
+    avoid: Set<Limitation>,
+    canGenerate: Boolean,
+    isGenerating: Boolean,
+    onSplitChange: (RoutineSplit) -> Unit,
+    onGoalChange: (TrainingGoal) -> Unit,
+    onToggleEquipment: (Equipment) -> Unit,
+    onTimeBudgetChange: (Int) -> Unit,
+    onToggleLimitation: (Limitation) -> Unit,
+    onGenerate: () -> Unit,
+) {
+    GlassCard(
+        borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(Gold.copy(alpha = 0.55f), Cyan.copy(alpha = 0.35f)),
+        ),
+    ) {
+        SectionTitle(stringResource(R.string.routine_generator_hint), accent = Gold)
+        Spacer(Modifier.height(16.dp))
+
+        Text(stringResource(R.string.routine_generator_split_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(4.dp))
+        var splitExpanded by remember { mutableStateOf(false) }
+        Box {
+            OutlinedButton(onClick = { splitExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(split.label(), color = Cyan)
+            }
+            DropdownMenu(expanded = splitExpanded, onDismissRequest = { splitExpanded = false }) {
+                RoutineSplit.entries.forEach { candidate ->
+                    DropdownMenuItem(text = { Text(candidate.label()) }, onClick = {
+                        onSplitChange(candidate)
+                        splitExpanded = false
+                    })
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.routine_generator_goal_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(4.dp))
+        var goalExpanded by remember { mutableStateOf(false) }
+        Box {
+            OutlinedButton(onClick = { goalExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(goal.label(), color = Cyan)
+            }
+            DropdownMenu(expanded = goalExpanded, onDismissRequest = { goalExpanded = false }) {
+                TrainingGoal.entries.forEach { candidate ->
+                    DropdownMenuItem(text = { Text(candidate.label()) }, onClick = {
+                        onGoalChange(candidate)
+                        goalExpanded = false
+                    })
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.routine_generator_equipment_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        FlowChips(
+            items = Equipment.entries,
+            isSelected = { it in availableEquipment },
+            label = { it.label() },
+            onToggle = onToggleEquipment,
+        )
+
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.routine_generator_time_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        FlowChips(
+            items = RoutineGeneratorUiState.TIME_BUDGET_OPTIONS,
+            isSelected = { it == timeBudgetMinutes },
+            label = { stringResource(R.string.routine_generator_minutes, it) },
+            onToggle = onTimeBudgetChange,
+            perRow = 4,
+        )
+
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.routine_generator_avoid_label), color = TextMuted, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        FlowChips(
+            items = Limitation.entries,
+            isSelected = { it in avoid },
+            label = { it.label() },
+            onToggle = onToggleLimitation,
+        )
+
+        Spacer(Modifier.height(16.dp))
+        AccentButton(
+            text = stringResource(R.string.routine_generator_generate),
+            enabled = canGenerate && !isGenerating,
+            onClick = onGenerate,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (!canGenerate) {
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.routine_generator_no_equipment), color = ErrorRed, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+/** Simple wrapping rows of toggleable chips (no Compose FlowRow dependency needed at these counts). */
+@Composable
+private fun <T> FlowChips(
+    items: List<T>,
+    isSelected: (T) -> Boolean,
+    label: @Composable (T) -> String,
+    onToggle: (T) -> Unit,
+    perRow: Int = 3,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        items.chunked(perRow).forEach { rowItems ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowItems.forEach { item ->
+                    Chip(
+                        text = label(item),
+                        accent = if (isSelected(item)) Gold else TextMuted,
+                        modifier = Modifier.clickable { onToggle(item) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Limitation.label(): String = stringResource(
+    when (this) {
+        Limitation.KNEE -> R.string.limitation_knee
+        Limitation.SHOULDER -> R.string.limitation_shoulder
+        Limitation.LOWER_BACK -> R.string.limitation_lower_back
+    },
+)
+
+/**
+ * "Last time: 60 kg × 8 · Suggested: 57 kg" — the suggestion follows the row's current rep target,
+ * so it updates as the athlete edits reps. Bodyweight work shows only the reps.
+ */
+@Composable
+private fun LastPerformance(row: RoutineDraftExercise, weightUnit: WeightUnit) {
+    val lastReps = row.lastReps ?: return
+    val lastKg = row.lastWeightKg ?: 0.0
+    val text = if (lastKg <= 0.0) {
+        stringResource(R.string.routine_generator_last_time_bodyweight, lastReps)
+    } else {
+        val last = stringResource(R.string.routine_generator_last_time, weightLabel(lastKg, weightUnit), lastReps)
+        StartingWeight.suggestKg(lastKg, lastReps, row.reps)
+            ?.let { "$last · " + stringResource(R.string.routine_generator_suggested, weightLabel(it, weightUnit)) }
+            ?: last
+    }
+    Spacer(Modifier.height(4.dp))
+    Text(text, color = Cyan, style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun DraftRowCard(
+    exerciseName: String,
+    row: RoutineDraftExercise,
+    weightUnit: WeightUnit,
+    /** Non-null while this row's "Cambiar" menu is open. */
+    swapOptions: List<Exercise>?,
+    onOpenSwap: () -> Unit,
+    onCloseSwap: () -> Unit,
+    onSwap: (Exercise) -> Unit,
+    onUpdate: (sets: Int, reps: Int, restSeconds: Int) -> Unit,
+    onRemove: () -> Unit,
+) {
+    var sets by remember(row.exerciseId) { mutableStateOf(row.sets.toString()) }
+    var reps by remember(row.exerciseId) { mutableStateOf(row.reps.toString()) }
+    var rest by remember(row.exerciseId) { mutableStateOf(row.restSeconds.toString()) }
+
+    fun pushUpdate() {
+        val s = sets.toIntOrNull() ?: row.sets
+        val r = reps.toIntOrNull() ?: row.reps
+        val t = rest.toIntOrNull() ?: row.restSeconds
+        onUpdate(s, r, t)
+    }
+
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(exerciseName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Box {
+                TextButton(onClick = onOpenSwap) {
+                    Text(stringResource(R.string.routine_generator_swap), color = Cyan)
+                }
+                DropdownMenu(expanded = swapOptions != null, onDismissRequest = onCloseSwap) {
+                    val options = swapOptions.orEmpty()
+                    if (options.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.routine_generator_swap_none), color = TextMuted) },
+                            onClick = onCloseSwap,
+                        )
+                    }
+                    options.forEach { option ->
+                        DropdownMenuItem(text = { Text(option.displayName()) }, onClick = { onSwap(option) })
+                    }
+                }
+            }
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_delete), tint = TextMuted)
+            }
+        }
+        LastPerformance(row, weightUnit)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = sets,
+                onValueChange = { sets = it; pushUpdate() },
+                label = { Text(stringResource(R.string.routine_generator_sets_label)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = reps,
+                onValueChange = { reps = it; pushUpdate() },
+                label = { Text(stringResource(R.string.reps)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = rest,
+                onValueChange = { rest = it; pushUpdate() },
+                label = { Text(stringResource(R.string.routine_generator_rest_label)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/**
+ * What generation is doing right now. A frozen spinner over a 30-second first load reads as a
+ * hang; a phase and a running count of seconds read as progress.
+ */
+@Composable
+private fun GeneratingCard(phase: RoutineDraftState.Loading.Phase) {
+    var seconds by remember(phase) { mutableStateOf(0) }
+    LaunchedEffect(phase) {
+        while (true) {
+            delay(1_000)
+            seconds++
+        }
+    }
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                when (phase) {
+                    RoutineDraftState.Loading.Phase.READING_HISTORY -> stringResource(R.string.routine_generator_phase_history)
+                    RoutineDraftState.Loading.Phase.ASKING_MODEL -> stringResource(R.string.routine_generator_phase_model, seconds)
+                },
+                color = TextMuted,
+            )
+        }
+        if (phase == RoutineDraftState.Loading.Phase.ASKING_MODEL) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.routine_generator_first_load_hint),
+                color = TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+/** "más corta", "sin sentadilla": the draft stays as it is unless the change can be applied. */
+@Composable
+private fun RefineCard(
+    state: RoutineRefineState?,
+    enabled: Boolean,
+    onRefine: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var instruction by remember { mutableStateOf("") }
+    val busy = state is RoutineRefineState.Loading
+    GlassCard {
+        OutlinedTextField(
+            value = instruction,
+            onValueChange = { instruction = it.take(RoutineRefinePromptBuilder.MAX_INSTRUCTION_CHARS) },
+            label = { Text(stringResource(R.string.routine_generator_refine_label)) },
+            singleLine = true,
+            enabled = enabled && !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = { onRefine(instruction) },
+                enabled = enabled && !busy && instruction.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.routine_generator_refine_action), color = Cyan)
+            }
+            if (busy) {
+                CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.height(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.routine_generator_refining), color = TextMuted)
+            }
+        }
+        val message = when (state) {
+            is RoutineRefineState.Applied -> stringResource(R.string.routine_generator_refined) to Cyan
+            is RoutineRefineState.Failed -> state.message to ErrorRed
+            else -> null
+        }
+        message?.let { (text, color) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text, color = color, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel), tint = TextMuted)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * "¿Por qué esta rutina?" — only when asked: prose is slow on a small model, and the routine itself
+ * shouldn't wait for a paragraph. Types itself out like the other AI answers.
+ */
+@Composable
+private fun ExplanationCard(state: SuggestionState?, enabled: Boolean, onExplain: () -> Unit) {
+    GlassCard {
+        when (state) {
+            null -> TextButton(onClick = onExplain, enabled = enabled) {
+                Text(stringResource(R.string.routine_generator_explain), color = Cyan)
+            }
+            SuggestionState.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.height(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.routine_generator_explaining), color = TextMuted)
+            }
+            is SuggestionState.Success -> {
+                SectionTitle(stringResource(R.string.routine_generator_explain), accent = Cyan)
+                Spacer(Modifier.height(8.dp))
+                Text(state.suggestion, color = TextMuted)
+            }
+            is SuggestionState.Error -> {
+                Text(state.message, color = ErrorRed, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = onExplain, enabled = enabled) {
+                    Text(stringResource(R.string.action_retry), color = Cyan)
+                }
+            }
+        }
+    }
+}
+

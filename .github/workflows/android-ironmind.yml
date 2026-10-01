@@ -1,0 +1,164 @@
+name: Android CI (IronMind)
+
+on:
+  push:
+    branches: [ "claude/gym-tracking-app-offline-2qri5t" ]
+    paths:
+      - "IronMind/**"
+      - ".github/workflows/android-ironmind.yml"
+  pull_request:
+    paths:
+      - "IronMind/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to publish the debug APK as a Release asset
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: IronMind
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          # Skip the obsolete legacy "tools" package (removed by Google; its install fails on
+          # current runners). AGP downloads the platform/build-tools it needs on demand.
+          packages: ""
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      # Room writes the current schema version to app/schemas while compiling. One that isn't
+      # committed means MigrationTestHelper can never verify the migration into it, and the next
+      # migration has nothing to start from. This runner is the only place the file can come from
+      # (the dev sandbox can't reach the Android Gradle Plugin), so print it for committing.
+      - name: Room schemas are committed
+        run: |
+          git add --intent-to-add app/schemas
+          if ! git diff --quiet -- app/schemas; then
+            echo "::error::Room generated a schema that is not committed under IronMind/app/schemas"
+            for f in $(git diff --name-only --relative -- app/schemas); do
+              echo "===== BEGIN $f ====="
+              cat "$f"
+              echo "===== END $f ====="
+            done
+            exit 1
+          fi
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ironmind-debug-apk
+          path: IronMind/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      # Build the release APK too, so R8/minify actually runs against the
+      # ProGuard keep rules (Room, Hilt, MediaPipe). Debug never minifies, so
+      # this is the only place a broken shrink config would surface in CI.
+      # No signing config is set, so this produces an *unsigned* release APK.
+      - name: Assemble release APK (R8 / minify)
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Upload release APK (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ironmind-release-apk-unsigned
+          path: IronMind/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      # Publish the debug APK as a Release asset so it can be downloaded and installed directly
+      # from a phone (a stable link, no GitHub login or zip needed). The debug APK is debug-signed,
+      # so it installs on any device; the release APK stays unsigned and is not published here.
+      # Also publish the APK under a name carrying the commit. The release asset `app-debug.apk`
+      # has a fixed URL, so a phone that downloaded it before already has that file name in
+      # Downloads and the browser serves the cached copy — which made a shipped fix look like it
+      # had not worked at all. A commit-stamped name cannot collide with a stale download.
+      - name: Copy the APK to a commit-stamped name
+        if: github.event_name == 'push'
+        run: cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/ironmind-${GITHUB_SHA::7}.apk"
+
+      - name: Publish debug APK to a Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-debug
+          name: IronMind (debug APK)
+          prerelease: true
+          files: IronMind/app/build/outputs/apk/debug/*.apk
+          body: |
+            Debug build of IronMind for on-device testing, from
+            `claude/gym-tracking-app-offline-2qri5t` @ ${{ github.sha }}.
+
+            **Download `ironmind-*.apk`** (the one with the commit in its name) rather than
+            `app-debug.apk`: that second name never changes, so a browser that downloaded it
+            before will hand you the old file from its cache.
+
+            Install: open the `.apk` on an Android phone (8.0+), allow "install unknown apps"
+            for your browser/files app, then tap Install. Play Protect warns about any sideloaded
+            app from an unknown developer — choose "Install anyway".
+
+            To confirm which build ended up on the phone, open *Modelo de IA*: the bottom of the
+            first card shows the installed build, which matches the commit above.
+
+  # Run the instrumented tests (Room DAO + backup restore) on a real emulator. Kept in a
+  # separate job because it needs KVM + a booted emulator, which the unit-test/build job does not.
+  instrumented:
+    name: Instrumented tests (emulator)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+
+      # Public GitHub runners expose /dev/kvm but not with group-writable perms by default; the
+      # hardware-accelerated emulator needs it.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        working-directory: IronMind
+
+      - name: Instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          working-directory: IronMind
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --stacktrace

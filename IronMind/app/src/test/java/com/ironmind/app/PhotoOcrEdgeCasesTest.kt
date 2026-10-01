@@ -1,0 +1,174 @@
+package com.ironmind.app
+
+import com.ironmind.app.domain.model.WeightUnit
+import com.ironmind.app.domain.util.DetectedWeight
+import com.ironmind.app.domain.util.PhotoWeightMode
+import com.ironmind.app.domain.util.parseDetectedWeights
+import com.ironmind.app.domain.util.resolveWeightKg
+import com.ironmind.app.domain.util.snapToPlate
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/**
+ * Unit tests for photo OCR edge cases.
+ * Verifies weight detection and parsing handles noisy OCR and user input correctly.
+ */
+class PhotoOcrEdgeCasesTest {
+
+    private val EPSILON = 0.01
+
+    @Test
+    fun parsesPlainKgNumber() {
+        val result = parseDetectedWeights("25")
+        assertEquals(1, result.size)
+        assertEquals(DetectedWeight(25.0, null), result[0])
+    }
+
+    @Test
+    fun parsesKgWithExplicitUnit() {
+        val result = parseDetectedWeights("25 kg")
+        assertEquals(1, result.size)
+        assertEquals(DetectedWeight(25.0, WeightUnit.KG), result[0])
+    }
+
+    @Test
+    fun parsesLbWithExplicitUnit() {
+        val result = parseDetectedWeights("45 LB")
+        assertEquals(1, result.size)
+        assertEquals(DetectedWeight(45.0, WeightUnit.LB), result[0])
+    }
+
+    @Test
+    fun parsesDecimalWeightWithComma() {
+        val result = parseDetectedWeights("2,5 kg")
+        assertEquals(1, result.size)
+        assertEquals(DetectedWeight(2.5, WeightUnit.KG), result[0])
+    }
+
+    @Test
+    fun parsesDecimalWeightWithDot() {
+        val result = parseDetectedWeights("2.5 kg")
+        assertEquals(1, result.size)
+        assertEquals(DetectedWeight(2.5, WeightUnit.KG), result[0])
+    }
+
+    @Test
+    fun filtersOutImplausiblySmallWeight() {
+        val result = parseDetectedWeights("0.25 kg")
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun filtersOutImplausiblyLargeWeight() {
+        val result = parseDetectedWeights("500 kg")
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun parsesMultipleWeightsInText() {
+        val result = parseDetectedWeights("25 kg and 20 kg or 15 lb")
+        assertEquals(3, result.size)
+        assertEquals(25.0, result[0].value, EPSILON)
+        assertEquals(20.0, result[1].value, EPSILON)
+        assertEquals(15.0, result[2].value, EPSILON)
+    }
+
+    @Test
+    fun ignoresSerialNumbers() {
+        val result = parseDetectedWeights("Serial: 2021, Weight: 25 kg")
+
+        // Only the 25 kg. A 4-digit run is rejected whole: it used to be split into "202"
+        // (dropped as implausible) and a leftover "1", which was then offered as a 1 kg plate.
+        assertEquals(1, result.size)
+        assertEquals(25.0, result.single().value, EPSILON)
+    }
+
+    @Test
+    fun ignoresLongDigitRunsEntirely() {
+        assertEquals(emptyList<Any>(), parseDetectedWeights("SKU 1234567"))
+        assertEquals(emptyList<Any>(), parseDetectedWeights("Model 1234"))
+    }
+
+    @Test
+    fun ignoresLongNumbersWrittenWithSeparators() {
+        // The separators are the same ones a decimal weight uses, so a serial like 1.234.567 has
+        // to be rejected as a whole rather than yielding its leading "1" as a 1 kg plate.
+        assertEquals(emptyList<Any>(), parseDetectedWeights("S/N 1.234.567"))
+        assertEquals(emptyList<Any>(), parseDetectedWeights("Ref 1,250"))
+        assertEquals(emptyList<Any>(), parseDetectedWeights("Cod 1.500"))
+    }
+
+    @Test
+    fun stillReadsDecimalWeightsAndTrailingPunctuation() {
+        assertEquals(2.5, parseDetectedWeights("2.5 kg").single().value, EPSILON)
+        assertEquals(2.5, parseDetectedWeights("2,5 kg").single().value, EPSILON)
+        assertEquals(25.0, parseDetectedWeights("Peso: 25.").single().value, EPSILON)
+    }
+
+    @Test
+    fun snapsNoiseToNearestPlate() {
+        val snapped = snapToPlate(19.8, WeightUnit.KG)
+        assertEquals(20.0, snapped!!, EPSILON)
+    }
+
+    @Test
+    fun snapsOcrMisreadToPlate() {
+        val snapped = snapToPlate(24.9, WeightUnit.KG)
+        assertEquals(25.0, snapped!!, EPSILON)
+    }
+
+    @Test
+    fun returnsNullWhenFarFromAnyPlate() {
+        val snapped = snapToPlate(23.0, WeightUnit.KG)
+        assertNull(snapped)
+    }
+
+    @Test
+    fun resolvesPlatesPerSideForBarbell() {
+        val kg = resolveWeightKg(
+            values = listOf(25.0, 20.0),  // 45 kg per side
+            unit = WeightUnit.KG,
+            mode = PhotoWeightMode.PLATES_PER_SIDE,
+            bar = 20.0,
+        )
+        // 20 (bar) + (25 + 20) * 2 = 110
+        assertEquals(110.0, kg, EPSILON)
+    }
+
+    @Test
+    fun resolvesDirectWeight() {
+        val kg = resolveWeightKg(
+            values = listOf(25.0),
+            unit = WeightUnit.KG,
+            mode = PhotoWeightMode.DIRECT,
+            bar = 20.0,
+        )
+        // Direct mode ignores bar, just sums: 25
+        assertEquals(25.0, kg, EPSILON)
+    }
+
+    @Test
+    fun convertsLbPlatesPerSideToKg() {
+        val kg = resolveWeightKg(
+            values = listOf(45.0),  // 45 lb on one side
+            unit = WeightUnit.LB,
+            mode = PhotoWeightMode.PLATES_PER_SIDE,
+            bar = 45.0,
+        )
+        // 45 lb bar (20.41 kg) + 45 lb (20.41 kg) * 2 ≈ 61.2 kg
+        assertEquals(61.24, kg, 0.1)
+    }
+
+    @Test
+    fun handlesEmptyOcrText() {
+        val result = parseDetectedWeights("")
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun handlesNoiseOnlyText() {
+        val result = parseDetectedWeights("abcdef xyz")
+        assertEquals(0, result.size)
+    }
+}

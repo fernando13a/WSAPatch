@@ -1,0 +1,23 @@
+package com.ironmind.app.domain.model
+
+/**
+ * A single exercise in the catalog (e.g. "Barbell Bench Press").
+ * Pure domain model — free of any Room/persistence annotations.
+ */
+data class Exercise(
+    val id: Long = 0,
+    val name: String,
+    val muscleGroup: MuscleGroup,
+    val equipment: Equipment,
+    val description: String? = null,
+    /** `true` for user-created exercises, `false` for the seeded catalog. */
+    val isCustom: Boolean = true,
+    /** Step-by-step technique cues (how to perform it). */
+    val instructions: String? = null,
+    /** Absolute path to a user-attached reference image on this device, if any (takes priority). */
+    val imagePath: String? = null,
+    /** Optional public demo-image URL (loaded on demand and cached). */
+    val imageUrl: String? = null,
+    /** Spanish name for bilingual display; auto-populated from vocabulary or Gemma. */
+    val nameEs: String? = null,
+)
