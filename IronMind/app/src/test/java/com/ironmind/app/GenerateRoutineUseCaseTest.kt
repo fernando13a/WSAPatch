@@ -2,6 +2,10 @@ package com.ironmind.app
 
 import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.ai.LlmModelNotFoundException
+import com.ironmind.app.domain.ai.RoutineGeneratorPromptBuilder
+import com.ironmind.app.domain.ai.RoutineRefinePromptBuilder
+import com.ironmind.app.domain.model.RoutineDraftExercise
+import com.ironmind.app.domain.model.RoutineRefineState
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.Limitation
@@ -132,6 +136,110 @@ class GenerateRoutineUseCaseTest {
         assertTrue("${short.exercises.size} vs ${unlimited.exercises.size}", short.exercises.size < unlimited.exercises.size)
     }
 
+    /** A list of numbers to parse is asked for at low temperature, not the chat's 0.8. */
+    @Test
+    fun theChoiceIsSampledAtTheRoutineTemperature() = runTest {
+        val llm = FakeLlmInferenceService(chunks = listOf("1, 2"))
+
+        generate(llm)
+
+        assertEquals(RoutineGeneratorPromptBuilder.TEMPERATURE, llm.lastTemperature)
+        assertTrue(RoutineGeneratorPromptBuilder.TEMPERATURE < 0.5f)
+    }
+
+    // ---- refine ---------------------------------------------------------------------------
+
+    private suspend fun refine(
+        llm: LlmInferenceService,
+        current: List<RoutineDraftExercise>,
+        instruction: String = "más corta",
+        exercises: List<Exercise> = listOf(bench, ohp, lateral, pushdown),
+    ) = GenerateRoutineUseCase(repository(exercises), llm)
+        .refine(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY, current, instruction, now = NOW)
+        .toList()
+
+    private fun row(exercise: Exercise, sets: Int = 3) =
+        RoutineDraftExercise(exerciseId = exercise.id, sets = sets, reps = 10, restSeconds = 60)
+
+    /** The current session is listed first, so dropping one is dropping its number. */
+    @Test
+    fun refiningCanDropAnExerciseAndKeepsTheOthersAsTheyWere() = runTest {
+        val current = listOf(row(bench, sets = 5), row(ohp), row(pushdown))
+
+        val last = refine(FakeLlmInferenceService(chunks = listOf("1, 3")), current).last()
+
+        val rows = (last as RoutineRefineState.Applied).rows
+        assertEquals(listOf(bench.id, pushdown.id), rows.map { it.exerciseId })
+        assertEquals("the athlete's edit survives", 5, rows.first { it.exerciseId == bench.id }.sets)
+    }
+
+    /** "Sin hombro" must not get a shoulder exercise put back for coverage. */
+    @Test
+    fun refiningDoesNotRefillForCoverage() = runTest {
+        val current = listOf(row(bench), row(ohp), row(pushdown))
+
+        val last = refine(FakeLlmInferenceService(chunks = listOf("1, 3")), current, "sin hombro").last()
+
+        val ids = (last as RoutineRefineState.Applied).rows.map { it.exerciseId }
+        assertTrue(ohp.id !in ids && lateral.id !in ids)
+    }
+
+    @Test
+    fun refiningCanBringInAnExerciseFromTheList() = runTest {
+        // Current: bench(1), ohp(2), pushdown(3); the shortlist adds lateral as 4.
+        val current = listOf(row(bench), row(ohp), row(pushdown))
+
+        val last = refine(FakeLlmInferenceService(chunks = listOf("1, 2, 3, 4")), current, "más hombro").last()
+
+        val rows = (last as RoutineRefineState.Applied).rows
+        assertTrue(lateral.id in rows.map { it.exerciseId })
+        val added = rows.first { it.exerciseId == lateral.id }
+        assertEquals("new rows get the goal's prescription", RoutinePrescription.forExercise(TrainingGoal.HYPERTROPHY, false).reps, added.reps)
+    }
+
+    /** A failed adjustment leaves the draft alone and says why — never falls back to rules. */
+    @Test
+    fun aFailedRefineLeavesTheDraftAndSaysWhy() = runTest {
+        val current = listOf(row(bench), row(ohp))
+
+        val last = refine(FakeLlmInferenceService(chunks = listOf("no entiendo")), current).last()
+
+        val message = (last as RoutineRefineState.Failed).message
+        assertTrue(message, message.contains("tu rutina quedó igual"))
+        assertTrue(message, message.contains("no entiendo"))
+    }
+
+    @Test
+    fun theSameRoutineBackIsReportedAsNoChange() = runTest {
+        val current = listOf(row(bench), row(ohp), row(pushdown))
+
+        val last = refine(FakeLlmInferenceService(chunks = listOf("1, 2, 3")), current).last()
+
+        assertTrue((last as RoutineRefineState.Failed).message.contains("misma rutina"))
+    }
+
+    @Test
+    fun aBlankInstructionAsksForOneWithoutCallingTheModel() = runTest {
+        val llm = FakeLlmInferenceService(chunks = listOf("1"))
+
+        val last = refine(llm, listOf(row(bench)), instruction = "   ").last()
+
+        assertTrue(last is RoutineRefineState.Failed)
+        assertTrue("the model must not be asked", llm.prompts.isEmpty())
+    }
+
+    @Test
+    fun theRefinePromptCarriesTheRequestAndTheCurrentSession() = runTest {
+        val llm = FakeLlmInferenceService(chunks = listOf("1"))
+
+        refine(llm, listOf(row(bench), row(ohp)), instruction = "sin press militar")
+
+        val prompt = llm.prompts.single()
+        assertTrue(prompt, prompt.contains("«sin press militar»"))
+        assertTrue(prompt, prompt.contains("Sesión actual: 1, 2"))
+        assertEquals(RoutineRefinePromptBuilder.TEMPERATURE, llm.lastTemperature)
+    }
+
     @Test
     fun withNoHistoryThereIsNothingToExplain() = runTest {
         assertTrue(draftOf(generate(unusable)).adjustments.isEmpty())
@@ -148,7 +256,11 @@ class GenerateRoutineUseCaseTest {
         // Shortlist order is round-robin: bench(1), ohp(2), pushdown(3), lateral(4).
         val states = generate(FakeLlmInferenceService(chunks = listOf("1, ", "2, 3, 4")))
 
-        assertEquals(RoutineDraftState.Loading, states.first())
+        // Says what it's doing while it works: reading history, then waiting on the model.
+        assertEquals(
+            listOf(RoutineDraftState.Loading.Phase.READING_HISTORY, RoutineDraftState.Loading.Phase.ASKING_MODEL),
+            states.filterIsInstance<RoutineDraftState.Loading>().map { it.phase },
+        )
         val draft = draftOf(states)
         assertEquals(RoutineDraft.Source.AI, draft.source)
         assertNull(draft.notice)

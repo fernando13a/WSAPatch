@@ -198,6 +198,18 @@ class RoutineAssemblerTest {
         assertEquals(5, RoutinePrescription.estimatedSessionMinutes(emptyList()))
     }
 
+    /** An explicit "no shoulders" must not get a shoulder exercise put back, nor time padding. */
+    @Test
+    fun withoutFillingGapsTheChoiceIsTheWholeRoutine() {
+        val rows = RoutineAssembler.assemble(
+            RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY, push, chosen = listOf(lateral, bench),
+            timeBudgetMinutes = 90, fillGaps = false,
+        )
+
+        // Ordered compounds first, but nothing added for triceps coverage or the spare hour.
+        assertEquals(listOf(bench.id, lateral.id), rows.map { it.exerciseId })
+    }
+
     @Test
     fun noCandidatesMeansNoRoutine() {
         assertTrue(RoutineAssembler.assemble(RoutineSplit.PUSH, TrainingGoal.HYPERTROPHY, emptyList(), push).isEmpty())

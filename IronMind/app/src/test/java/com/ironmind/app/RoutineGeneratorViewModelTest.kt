@@ -6,6 +6,9 @@ import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.MuscleGroup
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftState
+import com.ironmind.app.domain.model.RoutineRefineState
+import com.ironmind.app.domain.model.SuggestionState
+import com.ironmind.app.domain.usecase.ExplainRoutineUseCase
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
 import com.ironmind.app.domain.usecase.GenerateRoutineUseCase
@@ -34,7 +37,7 @@ class RoutineGeneratorViewModelTest {
     private val pickAll = FakeLlmInferenceService(chunks = listOf("1, 2, 3"))
 
     private fun viewModel(repo: FakeWorkoutRepository, llm: FakeLlmInferenceService) =
-        RoutineGeneratorViewModel(repo, GenerateRoutineUseCase(repo, llm), FakeAppPreferences())
+        RoutineGeneratorViewModel(repo, GenerateRoutineUseCase(repo, llm), ExplainRoutineUseCase(llm), FakeAppPreferences())
 
     private fun repo() = FakeWorkoutRepository().apply { exercisesFlow.value = catalog }
 
@@ -193,6 +196,130 @@ class RoutineGeneratorViewModelTest {
         val row = vm.draftRows.value.first { it.exerciseId == 1L }
         assertEquals(80.0, row.lastWeightKg!!, 0.0)
         assertEquals(5, row.lastReps)
+    }
+
+    // ---- Cambiar --------------------------------------------------------------------------
+
+    private val dbPress = Exercise(id = 4, name = "Dumbbell Shoulder Press", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.DUMBBELL)
+    private val frontRaise = Exercise(id = 5, name = "Front Raise", muscleGroup = MuscleGroup.SHOULDERS, equipment = Equipment.DUMBBELL)
+
+    @Test
+    fun openSwapOffersSameMuscleAlternativesNotAlreadyInTheDraft() = runTest(mainRule.dispatcher) {
+        val repo = FakeWorkoutRepository().apply { exercisesFlow.value = catalog + dbPress + frontRaise }
+        val vm = viewModel(repo, FakeLlmInferenceService(chunks = listOf("1, 2, 3")))
+        vm.setTimeBudget(30) // no room to top up, so the draft is exactly bench, ohp, lateral
+        vm.generate()
+        val draftIds = vm.draftRows.value.map { it.exerciseId }.toSet()
+
+        vm.openSwap(ohp.id)
+
+        val options = vm.swapMenu.value!!.options
+        assertTrue(options.isNotEmpty())
+        assertTrue(options.all { it.muscleGroup == MuscleGroup.SHOULDERS })
+        assertTrue("never offers what's already there", options.none { it.id in draftIds })
+        assertEquals("a press for a press first", dbPress.id, options.first().id)
+    }
+
+    @Test
+    fun swappingLikeForLikeKeepsTheRowsNumbers() = runTest(mainRule.dispatcher) {
+        val repo = FakeWorkoutRepository().apply { exercisesFlow.value = catalog + dbPress }
+        val vm = viewModel(repo, pickAll)
+        vm.setTimeBudget(30) // keeps dbPress out of the draft, so it's a real swap target
+        vm.generate()
+        vm.updateRow(ohp.id, sets = 5, reps = 6, restSeconds = 120)
+
+        vm.swapRow(ohp.id, dbPress)
+
+        val row = vm.draftRows.value.single { it.exerciseId == dbPress.id }
+        assertEquals(5, row.sets)
+        assertEquals(6, row.reps)
+        assertTrue(vm.draftRows.value.none { it.exerciseId == ohp.id })
+        assertEquals(null, vm.swapMenu.value)
+    }
+
+    /** Four heavy sets of eight make no sense for a raise: across kinds, the goal re-prescribes. */
+    @Test
+    fun swappingACompoundForAnIsolationRePrescribes() = runTest(mainRule.dispatcher) {
+        val repo = FakeWorkoutRepository().apply { exercisesFlow.value = catalog + frontRaise }
+        val vm = viewModel(repo, pickAll)
+        vm.setTimeBudget(30) // keeps frontRaise out of the draft
+        vm.generate()
+        assertTrue(vm.draftRows.value.none { it.exerciseId == frontRaise.id })
+
+        vm.swapRow(ohp.id, frontRaise)
+
+        val row = vm.draftRows.value.single { it.exerciseId == frontRaise.id }
+        val isolation = RoutinePrescription.forExercise(TrainingGoal.HYPERTROPHY, compound = false)
+        assertEquals(isolation.reps, row.reps)
+        assertEquals(isolation.restSeconds, row.restSeconds)
+    }
+
+    @Test
+    fun swappingToAnExerciseAlreadyInTheDraftDoesNothing() = runTest(mainRule.dispatcher) {
+        val vm = viewModel(repo(), pickAll)
+        vm.generate()
+        val before = vm.draftRows.value
+
+        vm.swapRow(ohp.id, bench) // bench is already a row
+
+        assertEquals(before, vm.draftRows.value)
+    }
+
+    // ---- Ajustar con texto ----------------------------------------------------------------
+
+    @Test
+    fun anAppliedRefineReplacesTheRows() = runTest(mainRule.dispatcher) {
+        // One fake answers both requests with "1, 3". Generating: bench and lateral, with ohp
+        // topped up for time → bench, ohp, lateral. Refining lists that session first, so "1, 3"
+        // now means bench and lateral: the press is dropped.
+        val vm = viewModel(repo(), FakeLlmInferenceService(chunks = listOf("1, 3")))
+        vm.generate()
+        assertEquals(listOf(bench.id, ohp.id, lateral.id), vm.draftRows.value.map { it.exerciseId })
+
+        vm.refine("sin press militar")
+
+        assertTrue(vm.refineState.value is RoutineRefineState.Applied)
+        assertEquals(listOf(bench.id, lateral.id), vm.draftRows.value.map { it.exerciseId })
+    }
+
+    @Test
+    fun aFailedRefineLeavesTheDraftExactlyAsItWas() = runTest(mainRule.dispatcher) {
+        val vm = viewModel(repo(), pickAll)
+        vm.generate()
+        vm.updateRow(bench.id, sets = 5, reps = 5, restSeconds = 180)
+        val before = vm.draftRows.value
+
+        vm.refine("   ") // nothing to apply
+
+        assertTrue(vm.refineState.value is RoutineRefineState.Failed)
+        assertEquals(before, vm.draftRows.value)
+    }
+
+    // ---- ¿Por qué esta rutina? ------------------------------------------------------------
+
+    @Test
+    fun explainStreamsTheModelsAnswer() = runTest(mainRule.dispatcher) {
+        val llm = FakeLlmInferenceService(chunks = listOf("1, 2, 3"))
+        val vm = viewModel(repo(), llm)
+        vm.generate()
+
+        vm.explain()
+
+        val state = vm.explanation.value
+        assertTrue("was $state", state is SuggestionState.Success && state.isComplete)
+        assertTrue("explained with prose sampling", llm.lastTemperature == null)
+    }
+
+    /** An explanation of rows that changed since would describe a routine that isn't there. */
+    @Test
+    fun changingTheRowsClearsTheExplanation() = runTest(mainRule.dispatcher) {
+        val vm = viewModel(repo(), pickAll)
+        vm.generate()
+        vm.explain()
+
+        vm.removeRow(bench.id)
+
+        assertEquals(null, vm.explanation.value)
     }
 
     @Test

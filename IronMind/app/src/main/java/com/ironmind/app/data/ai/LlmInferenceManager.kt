@@ -59,13 +59,21 @@ class LlmInferenceManager @Inject constructor(
         resolveModelFile().let { it.exists() && it.length() >= AiConstants.MIN_PLAUSIBLE_MODEL_BYTES }
     }
 
-    override fun generateResponseStream(prompt: String): Flow<String> = callbackFlow {
+    override fun generateResponseStream(prompt: String): Flow<String> =
+        stream(prompt, AiConstants.TEMPERATURE)
+
+    override fun generateResponseStream(prompt: String, temperature: Float): Flow<String> =
+        stream(prompt, temperature)
+
+    // Temperature is per session, not per engine, so a structured request and a chat reply can
+    // sample differently without reloading half a gigabyte.
+    private fun stream(prompt: String, temperature: Float): Flow<String> = callbackFlow {
         inferenceMutex.withLock {
             val llm = ensureEngine()
 
             val sessionOptions = LlmInferenceSessionOptions.builder()
                 .setTopK(AiConstants.TOP_K)
-                .setTemperature(AiConstants.TEMPERATURE)
+                .setTemperature(temperature)
                 .build()
 
             val session = LlmInferenceSession.createFromOptions(llm, sessionOptions)

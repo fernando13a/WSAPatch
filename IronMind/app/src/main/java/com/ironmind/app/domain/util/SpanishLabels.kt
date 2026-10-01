@@ -2,6 +2,8 @@ package com.ironmind.app.domain.util
 
 import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.MuscleGroup
+import com.ironmind.app.domain.model.RoutineSplit
+import com.ironmind.app.domain.model.TrainingGoal
 
 /**
  * Spanish names for text the domain layer writes itself — model prompts and the explanations
@@ -22,6 +24,28 @@ fun MuscleGroup.spanishName(): String = when (this) {
     MuscleGroup.ABS -> "abdomen"
     MuscleGroup.FULL_BODY -> "cuerpo completo"
     MuscleGroup.OTHER -> "otro"
+}
+
+fun RoutineSplit.spanishName(): String = when (this) {
+    RoutineSplit.PUSH -> "empuje (pecho, hombro, tríceps)"
+    RoutineSplit.PULL -> "tirón (espalda, bíceps)"
+    RoutineSplit.LEGS -> "pierna"
+    RoutineSplit.UPPER -> "torso"
+    RoutineSplit.LOWER -> "tren inferior"
+    RoutineSplit.FULL_BODY -> "cuerpo completo"
+    RoutineSplit.CHEST_TRICEPS -> "pecho y tríceps"
+    RoutineSplit.BACK_BICEPS -> "espalda y bíceps"
+    RoutineSplit.SHOULDERS -> "hombro"
+    RoutineSplit.ARMS -> "brazos"
+    RoutineSplit.CORE -> "core y abdomen"
+    RoutineSplit.CARDIO -> "cardio"
+    RoutineSplit.CUSTOM -> "libre"
+}
+
+fun TrainingGoal.spanishName(): String = when (this) {
+    TrainingGoal.STRENGTH -> "fuerza"
+    TrainingGoal.HYPERTROPHY -> "hipertrofia"
+    TrainingGoal.ENDURANCE -> "resistencia muscular"
 }
 
 fun Limitation.spanishName(): String = when (this) {

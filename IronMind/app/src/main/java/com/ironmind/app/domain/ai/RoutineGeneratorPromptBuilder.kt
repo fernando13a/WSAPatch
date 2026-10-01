@@ -23,6 +23,13 @@ import com.ironmind.app.domain.util.spanishName
  */
 object RoutineGeneratorPromptBuilder {
 
+    /**
+     * Sampling for this prompt. The answer is a list of numbers to parse, so the default 0.8 —
+     * tuned for chat — only adds ways to get the format wrong; low keeps the choice sensible
+     * while still letting "Regenerar" come back with a different routine.
+     */
+    const val TEMPERATURE = 0.2f
+
     /** The numbers a model most often copies verbatim; each one it keeps is at least a valid pick. */
     private val EXAMPLE_PICKS = listOf(3, 1, 6, 2, 5)
 
@@ -78,27 +85,7 @@ object RoutineGeneratorPromptBuilder {
         }
     }
 
-    private fun RoutineSplit.spanish(): String = when (this) {
-        RoutineSplit.PUSH -> "empuje (pecho, hombro, tríceps)"
-        RoutineSplit.PULL -> "tirón (espalda, bíceps)"
-        RoutineSplit.LEGS -> "pierna"
-        RoutineSplit.UPPER -> "torso"
-        RoutineSplit.LOWER -> "tren inferior"
-        RoutineSplit.FULL_BODY -> "cuerpo completo"
-        RoutineSplit.CHEST_TRICEPS -> "pecho y tríceps"
-        RoutineSplit.BACK_BICEPS -> "espalda y bíceps"
-        RoutineSplit.SHOULDERS -> "hombro"
-        RoutineSplit.ARMS -> "brazos"
-        RoutineSplit.CORE -> "core y abdomen"
-        RoutineSplit.CARDIO -> "cardio"
-        RoutineSplit.CUSTOM -> "libre"
-    }
-
-    private fun TrainingGoal.spanish(): String = when (this) {
-        TrainingGoal.STRENGTH -> "fuerza"
-        TrainingGoal.HYPERTROPHY -> "hipertrofia"
-        TrainingGoal.ENDURANCE -> "resistencia muscular"
-    }
-
+    private fun RoutineSplit.spanish(): String = spanishName()
+    private fun TrainingGoal.spanish(): String = spanishName()
     private fun MuscleGroup.spanish(): String = spanishName()
 }

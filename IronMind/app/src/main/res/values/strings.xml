@@ -192,6 +192,17 @@
     <string name="routine_generator_last_time">Última vez: %1$s × %2$d</string>
     <string name="routine_generator_last_time_bodyweight">Última vez: %1$d reps</string>
     <string name="routine_generator_suggested">sugerido: %1$s</string>
+    <string name="routine_generator_phase_history">Revisando tu historial…</string>
+    <string name="routine_generator_phase_model">La IA está eligiendo ejercicios… %1$d s</string>
+    <string name="routine_generator_first_load_hint">La primera vez tarda más: el modelo se carga en memoria.</string>
+    <string name="routine_generator_swap">Cambiar</string>
+    <string name="routine_generator_swap_none">No hay alternativas con tu equipo</string>
+    <string name="routine_generator_refine_label">Ajusta la rutina (ej.: más corta, sin sentadilla)</string>
+    <string name="routine_generator_refine_action">Ajustar</string>
+    <string name="routine_generator_refining">Ajustando…</string>
+    <string name="routine_generator_refined">Rutina ajustada ✓</string>
+    <string name="routine_generator_explain">¿Por qué esta rutina?</string>
+    <string name="routine_generator_explaining">Pensando…</string>
     <string name="routine_generator_name_label">Nombre de la rutina</string>
     <string name="routine_generator_save">Guardar rutina</string>
     <string name="routine_generator_sets_label">Series</string>

@@ -3,12 +3,14 @@ package com.ironmind.app.domain.usecase
 import com.ironmind.app.domain.ai.LlmInferenceService
 import com.ironmind.app.domain.ai.LlmModelNotFoundException
 import com.ironmind.app.domain.ai.RoutineGeneratorPromptBuilder
+import com.ironmind.app.domain.ai.RoutineRefinePromptBuilder
 import com.ironmind.app.domain.model.Equipment
 import com.ironmind.app.domain.model.Exercise
 import com.ironmind.app.domain.model.Limitation
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftExercise
 import com.ironmind.app.domain.model.RoutineDraftState
+import com.ironmind.app.domain.model.RoutineRefineState
 import com.ironmind.app.domain.model.RoutineSplit
 import com.ironmind.app.domain.model.TrainingGoal
 import com.ironmind.app.domain.repository.WorkoutRepository
@@ -62,7 +64,7 @@ class GenerateRoutineUseCase @Inject constructor(
         avoid: Set<Limitation> = emptySet(),
         now: Long = System.currentTimeMillis(),
     ): Flow<RoutineDraftState> = flow {
-        emit(RoutineDraftState.Loading)
+        emit(RoutineDraftState.Loading(RoutineDraftState.Loading.Phase.READING_HISTORY))
 
         val catalog = repository.getAllExercises()
         val history = TrainingHistory.from(
@@ -81,7 +83,9 @@ class GenerateRoutineUseCase @Inject constructor(
             return@flow
         }
 
-        val choice = askModel(split, goal, candidates, history, timeBudgetMinutes)
+        emit(RoutineDraftState.Loading(RoutineDraftState.Loading.Phase.ASKING_MODEL))
+        val prompt = RoutineGeneratorPromptBuilder.build(split, goal, candidates, history, timeBudgetMinutes)
+        val choice = interpret(ask(prompt, RoutineGeneratorPromptBuilder.TEMPERATURE), candidates, BUILT_FROM_RULES)
         val rows = RoutineAssembler.assemble(
             split = split,
             goal = goal,
@@ -89,9 +93,7 @@ class GenerateRoutineUseCase @Inject constructor(
             chosen = (choice as? ModelChoice.Picked)?.exercises.orEmpty(),
             history = history,
             timeBudgetMinutes = timeBudgetMinutes,
-        ).map { row ->
-            history.lastTopSet[row.exerciseId]?.let { row.copy(lastWeightKg = it.weightKg, lastReps = it.reps) } ?: row
-        }
+        ).map { it.withLastTopSet(history) }
 
         emit(
             RoutineDraftState.Success(
@@ -101,12 +103,75 @@ class GenerateRoutineUseCase @Inject constructor(
                     source = if (choice is ModelChoice.Picked) RoutineDraft.Source.AI else RoutineDraft.Source.RULES,
                     notice = (choice as? ModelChoice.Unusable)?.reason,
                     adjustments = adjustments(candidates, rows, history, avoid),
+                    goal = goal,
                 ),
             ),
         )
     }.catch { throwable ->
         // Only the repository can get here now; every model failure is already a rule-based draft.
         emit(RoutineDraftState.Error(throwable.message ?: "Ocurrió un error al generar la rutina."))
+    }
+
+    /**
+     * Adjusts [current] from the athlete's own words — "más corta", "sin sentadilla".
+     *
+     * Unlike generation, a failure here never replaces anything: the draft the athlete has been
+     * editing stays exactly as it was, and [RoutineRefineState.Failed] says why. Exercises kept
+     * from [current] keep their rows as they are, edits included; only new ones are prescribed
+     * from the goal. Nothing is added back for coverage or time ([RoutineAssembler]'s `fillGaps`),
+     * since that would overrule the request.
+     */
+    fun refine(
+        split: RoutineSplit,
+        goal: TrainingGoal,
+        current: List<RoutineDraftExercise>,
+        instruction: String,
+        availableEquipment: Set<Equipment>? = null,
+        avoid: Set<Limitation> = emptySet(),
+        now: Long = System.currentTimeMillis(),
+    ): Flow<RoutineRefineState> = flow {
+        emit(RoutineRefineState.Loading)
+        if (instruction.isBlank()) {
+            emit(RoutineRefineState.Failed("Escribe qué quieres cambiar de la rutina."))
+            return@flow
+        }
+
+        val catalog = repository.getAllExercises()
+        val byId = catalog.associateBy { it.id }
+        val inDraft = current.mapNotNull { byId[it.exerciseId] }
+        if (inDraft.isEmpty()) {
+            emit(RoutineRefineState.Failed("No hay ninguna rutina que ajustar."))
+            return@flow
+        }
+        val history = TrainingHistory.from(repository.getRecentActivity(now - HISTORY_WINDOW_MS), byId, now)
+        val inDraftIds = inDraft.mapTo(HashSet()) { it.id }
+        // The current session first, so "as it is" reads 1..n; then what could replace or join it.
+        val candidates = inDraft + RoutineCandidateSelector
+            .select(split, catalog, availableEquipment, history, avoid)
+            .filter { it.id !in inDraftIds }
+            .take((RoutineCandidateSelector.MAX_CANDIDATES - inDraft.size).coerceAtLeast(0))
+
+        val prompt = RoutineRefinePromptBuilder.build(split, goal, candidates, inDraft.size, instruction)
+        when (val choice = interpret(ask(prompt, RoutineRefinePromptBuilder.TEMPERATURE), candidates, LEFT_AS_IT_WAS)) {
+            is ModelChoice.Unusable -> emit(RoutineRefineState.Failed(choice.reason))
+            is ModelChoice.Picked -> {
+                val currentById = current.associateBy { it.exerciseId }
+                val rows = RoutineAssembler
+                    .assemble(split, goal, candidates, choice.exercises, fillGaps = false)
+                    .map { currentById[it.exerciseId] ?: it.withLastTopSet(history) }
+                emit(
+                    if (rows.map { it.exerciseId } == current.map { it.exerciseId }) {
+                        RoutineRefineState.Failed(
+                            "La IA devolvió la misma rutina, así que no cambió nada. Prueba a pedirlo de otra forma.",
+                        )
+                    } else {
+                        RoutineRefineState.Applied(rows)
+                    },
+                )
+            }
+        }
+    }.catch { throwable ->
+        emit(RoutineRefineState.Failed(throwable.message ?: "No se pudo ajustar la rutina."))
     }
 
     /**
@@ -137,54 +202,56 @@ class GenerateRoutineUseCase @Inject constructor(
         }
     }
 
-    private suspend fun askModel(
-        split: RoutineSplit,
-        goal: TrainingGoal,
-        candidates: List<Exercise>,
-        history: TrainingHistory,
-        timeBudgetMinutes: Int?,
-    ): ModelChoice {
+    private fun RoutineDraftExercise.withLastTopSet(history: TrainingHistory): RoutineDraftExercise =
+        history.lastTopSet[exerciseId]?.let { copy(lastWeightKg = it.weightKg, lastReps = it.reps) } ?: this
+
+    /** Runs [prompt] to completion. Says what happened; [interpret] decides what it means. */
+    private suspend fun ask(prompt: String, temperature: Float): ModelAnswer {
         val response = StringBuilder()
-        val prompt = RoutineGeneratorPromptBuilder.build(split, goal, candidates, history, timeBudgetMinutes)
         val finished = try {
             withTimeoutOrNull(GENERATION_TIMEOUT_MS) {
-                llmInferenceService
-                    .generateResponseStream(prompt)
-                    .collect { response.append(it) }
+                llmInferenceService.generateResponseStream(prompt, temperature).collect { response.append(it) }
                 true
             }
         } catch (e: CancellationException) {
             throw e // the screen went away; nothing to fall back for
         } catch (e: LlmModelNotFoundException) {
-            return ModelChoice.Unusable(
-                "El modelo de IA no está descargado, así que esta rutina se armó con reglas. " +
+            return ModelAnswer.NotDownloaded
+        } catch (e: Exception) {
+            return ModelAnswer.Failed(e.message.orEmpty().take(REASON_CHARS))
+        }
+        return if (finished == null) ModelAnswer.TimedOut else ModelAnswer.Text(response.toString())
+    }
+
+    /**
+     * The model's picks, or why there aren't any — worded as "<what happened>, así que
+     * <[consequence]>" so generation can say it fell back to rules and refining can say the
+     * draft was left alone.
+     */
+    private fun interpret(answer: ModelAnswer, candidates: List<Exercise>, consequence: String): ModelChoice {
+        val text = when (answer) {
+            ModelAnswer.NotDownloaded -> return ModelChoice.Unusable(
+                "El modelo de IA no está descargado, así que $consequence. " +
                     "Descárgalo en Modelo de IA para que la IA elija los ejercicios.",
             )
-        } catch (e: Exception) {
-            return ModelChoice.Unusable(
-                "La IA no pudo responder, así que esta rutina se armó con reglas. " +
-                    "Motivo: ${e.message.orEmpty().take(REASON_CHARS)}",
+            is ModelAnswer.Failed -> return ModelChoice.Unusable(
+                "La IA no pudo responder, así que $consequence. Motivo: ${answer.reason}",
             )
-        }
-        if (finished == null) {
-            return ModelChoice.Unusable(
-                "La IA tardó demasiado, así que esta rutina se armó con reglas. Prueba «Regenerar».",
+            ModelAnswer.TimedOut -> return ModelChoice.Unusable(
+                "La IA tardó demasiado, así que $consequence. Prueba de nuevo.",
             )
+            is ModelAnswer.Text -> answer.text.trim()
         }
+        if (text.isEmpty()) return ModelChoice.Unusable("La IA terminó sin responder nada, así que $consequence.")
 
-        val text = response.toString().trim()
-        if (text.isEmpty()) {
-            return ModelChoice.Unusable("La IA terminó sin responder nada, así que esta rutina se armó con reglas.")
-        }
         val picked = RoutineChoiceParser.parse(text, candidates)
         return when {
             picked.isEmpty() -> ModelChoice.Unusable(
-                "No pude interpretar la respuesta de la IA, así que esta rutina se armó con reglas. " +
-                    "Respondió: «${excerpt(text)}»",
+                "No pude interpretar la respuesta de la IA, así que $consequence. Respondió: «${excerpt(text)}»",
             )
             // Every line naming an exercise means it recited the list back rather than choosing.
             picked.size > ECHO_THRESHOLD -> ModelChoice.Unusable(
-                "La IA repitió la lista en vez de elegir, así que esta rutina se armó con reglas.",
+                "La IA repitió la lista en vez de elegir, así que $consequence.",
             )
             else -> ModelChoice.Picked(picked)
         }
@@ -192,6 +259,13 @@ class GenerateRoutineUseCase @Inject constructor(
 
     private fun excerpt(text: String): String =
         if (text.length > REASON_CHARS) text.take(REASON_CHARS).trimEnd() + "…" else text
+
+    private sealed interface ModelAnswer {
+        data class Text(val text: String) : ModelAnswer
+        data object NotDownloaded : ModelAnswer
+        data class Failed(val reason: String) : ModelAnswer
+        data object TimedOut : ModelAnswer
+    }
 
     private sealed interface ModelChoice {
         data class Picked(val exercises: List<Exercise>) : ModelChoice
@@ -216,5 +290,8 @@ class GenerateRoutineUseCase @Inject constructor(
 
         /** More picks than a session could hold, with slack for a model that overshoots a bit. */
         const val ECHO_THRESHOLD = RoutineAssembler.MAX_EXERCISES + 2
+
+        const val BUILT_FROM_RULES = "esta rutina se armó con reglas"
+        const val LEFT_AS_IT_WAS = "tu rutina quedó igual"
     }
 }

@@ -20,6 +20,8 @@ data class RoutineDraft(
      * exercises left out". Shown on the draft so a missing muscle or a short list isn't a mystery.
      */
     val adjustments: List<String> = emptyList(),
+    /** The goal it was built for — the form may have changed since, the draft hasn't. */
+    val goal: TrainingGoal = TrainingGoal.HYPERTROPHY,
 ) {
     enum class Source {
         /** The model picked and ordered the exercises; Kotlin balanced and prescribed them. */

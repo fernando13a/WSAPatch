@@ -10,11 +10,18 @@ import com.ironmind.app.domain.model.Routine
 import com.ironmind.app.domain.model.RoutineDraft
 import com.ironmind.app.domain.model.RoutineDraftExercise
 import com.ironmind.app.domain.model.RoutineDraftState
+import com.ironmind.app.domain.model.RoutineRefineState
 import com.ironmind.app.domain.model.RoutineSplit
+import com.ironmind.app.domain.model.SuggestionState
 import com.ironmind.app.domain.model.TrainingGoal
 import com.ironmind.app.domain.model.WeightUnit
 import com.ironmind.app.domain.repository.WorkoutRepository
+import com.ironmind.app.domain.usecase.ExplainRoutineUseCase
 import com.ironmind.app.domain.usecase.GenerateRoutineUseCase
+import com.ironmind.app.domain.util.RoutinePrescription
+import com.ironmind.app.domain.util.RoutineSwap
+import com.ironmind.app.domain.util.TrainingHistory
+import com.ironmind.app.domain.util.isCompound
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,17 +51,21 @@ data class RoutineGeneratorUiState(
     }
 }
 
+/** The open "Cambiar" menu: which row, and what it could become. */
+data class SwapMenu(val exerciseId: Long, val options: List<Exercise>)
+
 /**
- * Drives the AI routine generator screen: a form (split / goal / equipment) feeds
+ * Drives the AI routine generator screen: a form (split / goal / equipment / time / joints) feeds
  * [GenerateRoutineUseCase], whose result becomes an **editable** draft — [draftRows] is a mutable
- * copy of the AI's proposal the user can remove rows from or adjust before anything reaches
- * [WorkoutRepository]. [draftState] separately tracks the AI call's own Loading/Success/Error
- * status (for the loading spinner / error message), while [draftRows] is what actually gets saved.
+ * copy the user can remove rows from, swap, adjust in words, or edit before anything reaches
+ * [WorkoutRepository]. [draftState] separately tracks generation's own Loading/Success/Error
+ * status, while [draftRows] is what actually gets saved.
  */
 @HiltViewModel
 class RoutineGeneratorViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val generateRoutine: GenerateRoutineUseCase,
+    private val explainRoutine: ExplainRoutineUseCase,
     appPreferences: AppPreferences,
 ) : ViewModel() {
 
@@ -70,7 +81,19 @@ class RoutineGeneratorViewModel @Inject constructor(
     private val _draftRows = MutableStateFlow<List<RoutineDraftExercise>>(emptyList())
     val draftRows: StateFlow<List<RoutineDraftExercise>> = _draftRows.asStateFlow()
 
+    /** "¿Por qué esta rutina?" — null until asked, and again whenever the rows it explained change. */
+    private val _explanation = MutableStateFlow<SuggestionState?>(null)
+    val explanation: StateFlow<SuggestionState?> = _explanation.asStateFlow()
+
+    private val _refineState = MutableStateFlow<RoutineRefineState?>(null)
+    val refineState: StateFlow<RoutineRefineState?> = _refineState.asStateFlow()
+
+    private val _swapMenu = MutableStateFlow<SwapMenu?>(null)
+    val swapMenu: StateFlow<SwapMenu?> = _swapMenu.asStateFlow()
+
     private var generateJob: Job? = null
+    private var explainJob: Job? = null
+    private var refineJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -99,7 +122,11 @@ class RoutineGeneratorViewModel @Inject constructor(
         val state = _ui.value
         if (!state.canGenerate) return
         generateJob?.cancel()
+        refineJob?.cancel()
         _draftRows.value = emptyList()
+        _refineState.value = null
+        _swapMenu.value = null
+        invalidateExplanation()
         generateJob = viewModelScope.launch {
             generateRoutine(
                 split = state.split,
@@ -116,6 +143,7 @@ class RoutineGeneratorViewModel @Inject constructor(
 
     fun removeRow(exerciseId: Long) {
         _draftRows.update { rows -> rows.filterNot { it.exerciseId == exerciseId } }
+        invalidateExplanation()
     }
 
     fun updateRow(exerciseId: Long, sets: Int, reps: Int, restSeconds: Int) {
@@ -124,13 +152,131 @@ class RoutineGeneratorViewModel @Inject constructor(
                 if (row.exerciseId == exerciseId) row.copy(sets = sets, reps = reps, restSeconds = restSeconds) else row
             }
         }
+        invalidateExplanation()
+    }
+
+    // ---- "Cambiar" ------------------------------------------------------------------------
+
+    fun openSwap(exerciseId: Long) {
+        val state = _ui.value
+        val current = state.exercisesById[exerciseId] ?: return
+        _swapMenu.value = SwapMenu(
+            exerciseId = exerciseId,
+            options = RoutineSwap.options(
+                current = current,
+                catalog = state.exercisesById.values,
+                inDraft = _draftRows.value.mapTo(HashSet()) { it.exerciseId },
+                availableEquipment = state.availableEquipment,
+                avoid = state.avoid,
+            ),
+        )
+    }
+
+    fun closeSwap() {
+        _swapMenu.value = null
+    }
+
+    /**
+     * Puts [replacement] where [exerciseId] was. A like-for-like swap (compound for compound)
+     * keeps the row's numbers, edits included; across kinds the goal's prescription for the new
+     * movement applies, since four heavy sets of eight make no sense for a lateral raise.
+     */
+    fun swapRow(exerciseId: Long, replacement: Exercise) {
+        // The menu never offers one, but a duplicate row would save the same exercise twice.
+        if (_draftRows.value.any { it.exerciseId == replacement.id }) {
+            _swapMenu.value = null
+            return
+        }
+        val goal = currentDraft()?.goal ?: _ui.value.goal
+        val sameKind = _ui.value.exercisesById[exerciseId]?.isCompound() == replacement.isCompound()
+        _draftRows.update { rows ->
+            rows.map { row ->
+                if (row.exerciseId != exerciseId) return@map row
+                val base = if (sameKind) {
+                    row
+                } else {
+                    RoutinePrescription.forExercise(goal, replacement.isCompound()).let {
+                        row.copy(sets = it.sets, reps = it.reps, restSeconds = it.restSeconds)
+                    }
+                }
+                base.copy(exerciseId = replacement.id, lastWeightKg = null, lastReps = null)
+            }
+        }
+        _swapMenu.value = null
+        invalidateExplanation()
+
+        // The swapped-in exercise's own last session, for the "last time / suggested" line.
+        viewModelScope.launch {
+            val logs = repository.getRecentSetLogs(replacement.id, LAST_PERFORMANCE_SETS)
+            val top = TrainingHistory.from(logs, mapOf(replacement.id to replacement), System.currentTimeMillis())
+                .lastTopSet[replacement.id] ?: return@launch
+            _draftRows.update { rows ->
+                rows.map {
+                    if (it.exerciseId == replacement.id) it.copy(lastWeightKg = top.weightKg, lastReps = top.reps) else it
+                }
+            }
+        }
+    }
+
+    // ---- Adjust in words --------------------------------------------------------------------
+
+    fun refine(instruction: String) {
+        val draft = currentDraft() ?: return
+        val rows = _draftRows.value
+        if (rows.isEmpty()) return
+        val state = _ui.value
+        refineJob?.cancel()
+        refineJob = viewModelScope.launch {
+            generateRoutine.refine(
+                split = draft.split,
+                goal = draft.goal,
+                current = rows,
+                instruction = instruction,
+                availableEquipment = state.availableEquipment,
+                avoid = state.avoid,
+            ).collect { result ->
+                _refineState.value = result
+                if (result is RoutineRefineState.Applied) {
+                    _draftRows.value = result.rows
+                    invalidateExplanation()
+                }
+            }
+        }
+    }
+
+    fun dismissRefineMessage() {
+        _refineState.value = null
+    }
+
+    // ---- "¿Por qué esta rutina?" ----------------------------------------------------------
+
+    fun explain() {
+        val draft = currentDraft() ?: return
+        val rows = _draftRows.value
+        explainJob?.cancel()
+        explainJob = viewModelScope.launch {
+            explainRoutine(draft.split, draft.goal, rows, _ui.value.exercisesById, draft.adjustments)
+                .collect { _explanation.value = it }
+        }
+    }
+
+    /** An explanation of rows that have since changed would describe a routine that isn't there. */
+    private fun invalidateExplanation() {
+        explainJob?.cancel()
+        _explanation.value = null
     }
 
     fun dismissDraft() {
         generateJob?.cancel()
+        refineJob?.cancel()
         _draftState.value = null
         _draftRows.value = emptyList()
+        _refineState.value = null
+        _swapMenu.value = null
+        invalidateExplanation()
     }
+
+    private fun currentDraft(): RoutineDraft? = (_draftState.value as? RoutineDraftState.Success)?.draft
 
     /** Persists the current (possibly user-edited) draft rows as a new routine. */
     fun save(onDone: (routineId: Long) -> Unit) {
@@ -141,8 +287,7 @@ class RoutineGeneratorViewModel @Inject constructor(
             // Fallback name only matters if the user never typed one — the screen encourages
             // naming the routine, this just guarantees upsertRoutine never gets a blank name.
             // "(IA)" only when the model actually chose: a rule-built fallback isn't the AI's.
-            val fromRules = (_draftState.value as? RoutineDraftState.Success)
-                ?.draft?.source == RoutineDraft.Source.RULES
+            val fromRules = currentDraft()?.source == RoutineDraft.Source.RULES
             val name = state.routineName.trim().ifBlank {
                 if (fromRules) state.split.name else "${state.split.name} (IA)"
             }
@@ -159,5 +304,10 @@ class RoutineGeneratorViewModel @Inject constructor(
             }
             onDone(routineId)
         }
+    }
+
+    private companion object {
+        /** Enough to cover the last session of an exercise even with many sets logged in it. */
+        const val LAST_PERFORMANCE_SETS = 30
     }
 }

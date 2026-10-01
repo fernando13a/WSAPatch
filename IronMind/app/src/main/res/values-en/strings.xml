@@ -190,6 +190,17 @@
     <string name="routine_generator_last_time">Last time: %1$s × %2$d</string>
     <string name="routine_generator_last_time_bodyweight">Last time: %1$d reps</string>
     <string name="routine_generator_suggested">suggested: %1$s</string>
+    <string name="routine_generator_phase_history">Reading your history…</string>
+    <string name="routine_generator_phase_model">The AI is choosing exercises… %1$d s</string>
+    <string name="routine_generator_first_load_hint">The first time takes longer: the model is loading into memory.</string>
+    <string name="routine_generator_swap">Swap</string>
+    <string name="routine_generator_swap_none">No alternatives with your equipment</string>
+    <string name="routine_generator_refine_label">Adjust the routine (e.g. shorter, no squats)</string>
+    <string name="routine_generator_refine_action">Adjust</string>
+    <string name="routine_generator_refining">Adjusting…</string>
+    <string name="routine_generator_refined">Routine adjusted ✓</string>
+    <string name="routine_generator_explain">Why this routine?</string>
+    <string name="routine_generator_explaining">Thinking…</string>
     <string name="routine_generator_name_label">Routine name</string>
     <string name="routine_generator_save">Save routine</string>
     <string name="routine_generator_sets_label">Sets</string>

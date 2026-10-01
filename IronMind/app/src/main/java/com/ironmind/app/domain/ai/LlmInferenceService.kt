@@ -19,6 +19,16 @@ interface LlmInferenceService {
      */
     fun generateResponseStream(prompt: String): Flow<String>
 
+    /**
+     * Same, sampling at [temperature] instead of the default. Low values suit answers with a
+     * fixed shape (a list of numbers to parse), where the default's variety only adds ways to
+     * get the format wrong; prose and chat keep the default.
+     *
+     * Defaults to [generateResponseStream] so fakes that don't care about sampling needn't
+     * implement it.
+     */
+    fun generateResponseStream(prompt: String, temperature: Float): Flow<String> = generateResponseStream(prompt)
+
     /** Releases native resources held by the inference engine. */
     fun close()
 }

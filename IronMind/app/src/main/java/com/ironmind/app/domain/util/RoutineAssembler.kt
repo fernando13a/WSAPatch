@@ -49,6 +49,9 @@ object RoutineAssembler {
      * @param chosen the model's picks in its order; empty builds the routine from rules alone.
      *   Anything not in [candidates] is ignored.
      * @param timeBudgetMinutes the whole session including warm-up; null sizes by count instead.
+     * @param fillGaps false keeps [chosen] as the whole routine — no muscle added for coverage,
+     *   nothing topped up. For an athlete's explicit "make it shorter" or "no shoulders", where
+     *   putting a shoulder exercise back in would be overruling them. Caps and ordering still apply.
      */
     fun assemble(
         split: RoutineSplit,
@@ -57,6 +60,7 @@ object RoutineAssembler {
         chosen: List<Exercise> = emptyList(),
         history: TrainingHistory = TrainingHistory.EMPTY,
         timeBudgetMinutes: Int? = null,
+        fillGaps: Boolean = true,
     ): List<RoutineDraftExercise> {
         if (candidates.isEmpty()) return emptyList()
         val candidateIds = candidates.mapTo(HashSet()) { it.id }
@@ -78,24 +82,27 @@ object RoutineAssembler {
         // Cover every muscle group the split trains that the shortlist can offer. Skipped when
         // there are more such groups than a session holds (a custom split spans the catalog).
         val groupsToCover = groupsOnOffer.filter { it in splitGroups }
-        if (groupsToCover.size <= MAX_EXERCISES) {
+        if (fillGaps && groupsToCover.size <= MAX_EXERCISES) {
             groupsToCover.filter { group -> picked.none { it.muscleGroup == group } }.forEach { group ->
                 val forGroup = candidates.filter { it.muscleGroup == group && fits(it) }
                 (forGroup.firstOrNull { it.isCompound() } ?: forGroup.firstOrNull())?.let { picked += it }
             }
         }
 
-        if (timeBudgetMinutes == null) {
-            if (picked.size < MIN_EXERCISES) {
+        when {
+            // Nothing added and nothing trimmed for time: the athlete said what they want.
+            !fillGaps -> Unit
+            timeBudgetMinutes == null -> if (picked.size < MIN_EXERCISES) {
                 candidates.forEach { if (picked.size < TARGET_EXERCISES && fits(it)) picked += it }
             }
-        } else {
-            // With time to spare, use it; then trim whatever doesn't fit.
-            candidates.forEach { candidate ->
-                if (fits(candidate) && minutesFor(picked + candidate, goal) <= timeBudgetMinutes) picked += candidate
-            }
-            while (picked.size > MIN_EXERCISES_WHEN_SHORT_ON_TIME && minutesFor(picked, goal) > timeBudgetMinutes) {
-                picked.remove(leastNeeded(picked))
+            else -> {
+                // With time to spare, use it; then trim whatever doesn't fit.
+                candidates.forEach { candidate ->
+                    if (fits(candidate) && minutesFor(picked + candidate, goal) <= timeBudgetMinutes) picked += candidate
+                }
+                while (picked.size > MIN_EXERCISES_WHEN_SHORT_ON_TIME && minutesFor(picked, goal) > timeBudgetMinutes) {
+                    picked.remove(leastNeeded(picked))
+                }
             }
         }
 
@@ -110,7 +117,7 @@ object RoutineAssembler {
                 restSeconds = prescription.restSeconds,
             )
         }
-        return if (timeBudgetMinutes == null) rows else fitSetsToBudget(rows, timeBudgetMinutes)
+        return if (timeBudgetMinutes == null || !fillGaps) rows else fitSetsToBudget(rows, timeBudgetMinutes)
     }
 
     /** Below this a movement stops being worth the setup; the budget gives way instead. */
